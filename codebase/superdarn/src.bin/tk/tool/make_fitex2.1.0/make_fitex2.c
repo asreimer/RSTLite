@@ -101,8 +101,6 @@ int main(int argc,char *argv[])
 
   arg=OptionProcess(1,argc,argv,&opt,NULL);
 
-  fprintf(stderr,"%c \n",more_badlags);
-
   old=!new;
 
   if (help==1)
@@ -219,7 +217,7 @@ int main(int argc,char *argv[])
  
   fblk=FitACFMake(site,prm->time.yr);
 
-  fitacfex2(prm,raw,fit,fblk,0);
+  fitacfex2(prm,raw,fit,fblk,0,more_badlags);
 
   if (old)
   {
@@ -262,7 +260,7 @@ int main(int argc,char *argv[])
 
 
     if (status==0)
-			fitacfex2(prm,raw,fit,fblk,0,0);
+			fitacfex2(prm,raw,fit,fblk,0,more_badlags);
 
   } while (status==0);
 
