@@ -66,6 +66,7 @@ int main(int argc,char *argv[])
 
   unsigned char old=0;
   unsigned char new=0;
+  unsigned char more_badlags=0;
 
   char *envstr;
   int status;
@@ -96,8 +97,11 @@ int main(int argc,char *argv[])
   OptionAdd(&opt,"-option",'x',&option);
   OptionAdd(&opt,"vb",'x',&vb);
   OptionAdd(&opt,"new",'x',&new);
+  OptionAdd(&opt,"morebadlags",'x',&more_badlags);
 
   arg=OptionProcess(1,argc,argv,&opt,NULL);
+
+  fprintf(stderr,"%c \n",more_badlags);
 
   old=!new;
 
@@ -258,7 +262,7 @@ int main(int argc,char *argv[])
 
 
     if (status==0)
-			fitacfex2(prm,raw,fit,fblk,0);
+			fitacfex2(prm,raw,fit,fblk,0,0);
 
   } while (status==0);
 
