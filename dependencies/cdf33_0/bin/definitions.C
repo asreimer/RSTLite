@@ -24,7 +24,7 @@
 # `<path>/bin' could also be added to a user's path.  
 #-----------------------------------------------------------------------------
 
-setenv CDF_BASE /home/w2naf/cdf/330/cdf33_0-dist
+setenv CDF_BASE /home/ashtonsethreimer/RSTLite/dependencies/cdf33_0
 
 setenv CDF_INC $CDF_BASE/include
 setenv CDF_LIB $CDF_BASE/lib

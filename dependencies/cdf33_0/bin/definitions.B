@@ -33,7 +33,7 @@
 # the toolkit programs to be executed simply by specifying their names.
 #-----------------------------------------------------------------------------
 
-export CDF_BASE; CDF_BASE=/home/w2naf/cdf/330/cdf33_0-dist
+export CDF_BASE; CDF_BASE=/home/ashtonsethreimer/RSTLite/dependencies/cdf33_0
 
 export CDF_INC; CDF_INC=$CDF_BASE/include
 export CDF_LIB; CDF_LIB=$CDF_BASE/lib
