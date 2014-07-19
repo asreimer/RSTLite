@@ -22,7 +22,7 @@ ifdef OUTPUT
 $(OUTPUT): version hdr $(OBJS)
 	mkdir -p $(DSTPATH)
 	ar -r $(DSTPATH)/lib$(OUTPUT).$(VSTR).a $(OBJS)
-	$(LD) $(LFLAGS) -o $(DSTPATH)/lib$(OUTPUT).$(VSTR).$(SUF) \
+	$(CC) $(LFLAGS) -o $(DSTPATH)/lib$(OUTPUT).$(VSTR).$(SUF) \
               $(OBJS) $(LNK) -L$(LIBPATH) -L$(USR_LIBPATH) $(LIBS) $(SLIB)
 	cd $(DSTPATH); ln -sf lib$(OUTPUT).$(VSTR).a \
                lib$(OUTPUT).$(LINK).a 
