@@ -193,6 +193,10 @@ int main(int argc,char *argv[])
   int smp_flg = 0;                          /*output raw samples flag*/
   int decayflg = 0;
 
+  int rt = 0; 				    /* variable to catch return values of fscanf, 
+                                               prevents compile warnings which resulted in 
+                                               bizzare terminal behaviour in Ubuntu 14.04 LTS */
+
   /*other variables*/
   long i,j;
   double taus;
@@ -255,9 +259,9 @@ int main(int argc,char *argv[])
 	do
 	{
 
-		fscanf(fitfp,"%d  %d  %d  %d  %d  %d\n",&prm->time.yr,&prm->time.mo,&prm->time.dy,&prm->time.hr,&prm->time.mt,&prm->time.sc);
+		rt = fscanf(fitfp,"%d  %d  %d  %d  %d  %d\n",&prm->time.yr,&prm->time.mo,&prm->time.dy,&prm->time.hr,&prm->time.mt,&prm->time.sc);
 		fprintf(stderr,"%d  %d  %d  %d  %d  %d\n",prm->time.yr,prm->time.mo,prm->time.dy,prm->time.hr,prm->time.mt,prm->time.sc);
-		fscanf(fitfp,"%d  %lf  %d  %lf  %d  %d  %lf  %lf  %lf  %d\n",&cpid,&freq,&prm->bmnum,&noise_lev,&nave,&lagfr,&dt,&smsep,&rngsep,&nrang);
+		rt = fscanf(fitfp,"%d  %lf  %d  %lf  %d  %d  %lf  %lf  %lf  %d\n",&cpid,&freq,&prm->bmnum,&noise_lev,&nave,&lagfr,&dt,&smsep,&rngsep,&nrang);
 		lagfr /= smsep;
 		rngsep *= 1.e3;
 		smsep *= 1.e-6;
@@ -367,7 +371,7 @@ int main(int argc,char *argv[])
 		**********************************************************/
 		for(i=0;i<nrang;i++)
 		{
-			fscanf(fitfp,"%*d  %d  %lf  %lf  %lf\n",&qflg[i],&v_dop,&amp0,&t_d);
+			rt = fscanf(fitfp,"%*d  %d  %lf  %lf  %lf\n",&qflg[i],&v_dop,&amp0,&t_d);
 			t_d = lambda/(t_d*2.*PI);
 			if(t_d > 999999.) t_d = 0.;
 			t_d_arr[i] = t_d;
