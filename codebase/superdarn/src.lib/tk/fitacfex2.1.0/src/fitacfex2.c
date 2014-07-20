@@ -22,6 +22,7 @@
 #include "badlags.h"
 #include "badsmp.h"
 #include "lmfit.h"
+#include "rang_badlagsEx.h"
 
 /*
  $Log: fitacfex2.c,v $
@@ -184,7 +185,7 @@ double bisect(float w_guess, float diff, struct RawData *raw, float *good_lags, 
 }
 
 void fitacfex2(struct RadarParm *prm,struct RawData *raw,
-              struct FitData *fit, struct FitBlock *fblk, int print)
+              struct FitData *fit, struct FitBlock *fblk, int print, int more_badlags)
 {
   float minpwr  = 3.0;
   double skynoise = 0.;
@@ -340,6 +341,33 @@ void fitacfex2(struct RadarParm *prm,struct RawData *raw,
           fprintf(stdout,"%d  %lf  %lf  %d\n",lag,raw->acfd[0][R*prm->mplgs+L],raw->acfd[1][R*prm->mplgs+L],
                                             !(lagpwr[lag]>raw->acfd[0][R*prm->mplgs]/sqrt(1.0*prm->nave)));
       }
+
+      if (more_badlags) {
+          availcnt=0;
+          for (L=0;L<prm->mplgs;L++){
+            badlag[L]=0;
+          }
+          r_overlapEx(&fblk->prm);
+          lag_overlapEx(R+1,badlag,&fblk->prm);
+          for (L=0;L<prm->mplgs;L++) {
+
+            lag = L;
+            re  = raw->acfd[0][R*prm->mplgs+L];
+            im  = raw->acfd[1][R*prm->mplgs+L];
+            lagpwr[lag] = sqrt(re*re + im*im);
+
+            if ((badlag[L]==0) && (lagpwr[lag]>raw->acfd[0][R*prm->mplgs]/sqrt(1.0*prm->nave)))
+            {
+                lag_avail[availcnt] = lag;
+                availcnt++;
+            }
+            else lagpwr[L] = 0.0;
+
+          }
+
+
+      }
+
       pwr_flg = (lag0pwr>=minpwr);
     }
     /*check for tauscan operation (lag power checking, no badlag checking, SNR checking)*/
@@ -360,6 +388,31 @@ void fitacfex2(struct RadarParm *prm,struct RawData *raw,
         if(print)
           fprintf(stdout,"%d  %lf  %lf  %d\n",lag,raw->acfd[0][R*prm->mplgs+L],raw->acfd[1][R*prm->mplgs+L],
                                                 !(lagpwr[lag]>raw->acfd[0][R*prm->mplgs]/sqrt(1.0*prm->nave)));
+      }
+
+      if (more_badlags) {
+          availcnt=0;
+          for (L=0;L<prm->mplgs;L++){
+            badlag[L]=0;
+          }
+          r_overlapEx(&fblk->prm);
+          lag_overlapEx(R+1,badlag,&fblk->prm);
+          for (L=0;L<prm->mplgs;L++) {
+
+            lag = abs(prm->lag[0][L] - prm->lag[1][L]);
+            re  = raw->acfd[0][R*prm->mplgs+L];
+            im  = raw->acfd[1][R*prm->mplgs+L];
+            lagpwr[lag] = sqrt(re*re + im*im);
+
+            if ((badlag[L]==0) && (lagpwr[lag]>raw->acfd[0][R*prm->mplgs]/sqrt(1.0*prm->nave))) 
+            {
+                lag_avail[availcnt] = lag;
+                availcnt++;
+            }
+            else lagpwr[L] = 0.0;
+
+          }
+
       }
       pwr_flg = (lag0pwr>=minpwr);
     }
