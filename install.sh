@@ -10,7 +10,9 @@ export RSTPATH=$mydir
 . $mydir/.profile.bash
 echo $mydir
 
+echo "Building CDF library"
 cd $mydir/dependencies/cdf33_0
+make clean
 make OS=linux ENV=gnu all
 make install
 
