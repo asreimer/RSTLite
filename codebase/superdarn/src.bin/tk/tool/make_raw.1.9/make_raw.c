@@ -26,9 +26,43 @@
  
 **************************************
 VERSION 1.9 ASREIMER
-EDITS to make_raw so that rawacf from radars can 
-be properly reproduced from IQ data using this routine
+EDITS to make_raw so IQ data from digital receivers
+can be properly processed into rawacf files by this 
+code. Issue was that rngoff was hard-coded in such a
+way as to set it to 4 for digital receivers. See below.
+The xcf is also properly processed with these edits.
 **************************************
+
+ADDED FROM ACFCALCULATE DOCUMENTATION:
+  * For an analogue receiver, samples are multiplexed,
+  * eg. sample 1 & 2 are the I & Q for the main array,
+  * end sample 3 & 4 are the I & Q for the interferometer array.
+  * For a digital receiver samples are not multiplexed,
+  * so for the APL and Saskatoon implmentation the first X
+  * samples are the I & Q samples from the main array,
+  * followed by the I & Q samples from the secondary array.
+  * The Alaskan implementation is slightly different again
+  * using two halves of the total DMA buffer. 
+  *
+  * The differences in implementation are handled by a combination
+  * of the rngoff and xcfoff arguments.
+  *
+  * Analogue receiver:    rngoff        xcfoff
+  *
+  * No XCFs                 2             0
+  * With XCFs               4             2
+  *
+  * Digital Receiver      rngoff        xcfoff
+  * (APL & Saskatoon)     
+  * No XCFs                 2             0
+  * With XCFs               2             nsamp
+  *
+  * Digital Receiver      rngoff        xcfoff
+  * (Alaska)
+  * No XCFs                 2             0
+  * With XCFs               2             8192 (half DMA buffer size)
+  *
+
 */
 
 #include <stdio.h>
@@ -133,8 +167,12 @@ int main (int argc,char *argv[]) {
 
   int s=0;
 
+  /* ASREIMER 23 July 2014
+     Need to initialize new variables */
   int digital;
   int rngoff;
+  int xcfoff;
+  /* End ASREIMER */
 
   prm=RadarParmMake();
   iq=IQMake();
@@ -174,7 +212,7 @@ int main (int argc,char *argv[]) {
   OptionAdd(&opt,"t",'f',&thrsh);
   OptionAdd(&opt,"qi",'x',&qiflg);
   OptionAdd(&opt,"skip",'i',&skpval);
-  OptionAdd(&opt,"d",'x',&digital);
+  OptionAdd(&opt,"d",'x',&digital);  /* Added d option so we can process IQ data from digital receivers ASREIMER */
 
   arg=OptionProcess(1,argc,argv,&opt,NULL);
 
@@ -293,14 +331,25 @@ int main (int argc,char *argv[]) {
     
     badrng=ACFBadLagZero(&tprm,prm->mplgs,lag);
 
-    /* If processing IQ from a digital receiver we
+    /* ASREIMER 23 July 2014
+       If processing IQ from a digital receiver we
        have a different range offset than if analogue */
     if (digital) {
       rngoff = iq->chnnum;
+      if (prm->xcf==1) {
+        xcfoff = 2*iq->smpnum;
+      } else {
+        xcfoff = 0;
+      }
     } else {
       rngoff = 2*iq->chnnum;
+      if (prm->xcf==1) {
+        xcfoff = 2;
+      } else {
+        xcfoff = 0;
+      }
     }
-   
+    /* End ASREIMER */
 
     for (n=0;n<iq->seqnum;n++) {
 
@@ -308,24 +357,24 @@ int main (int argc,char *argv[]) {
 
 
       aflg=ACFSumPower(&tprm,mplgs,lag,pwr0,
-		       ptr,rngoff,skpval !=0,
+		       ptr,rngoff,skpval !=0, /* rngoff used to be 2*iq->chnum ASREIMER */
                        roff,ioff,badrng,
                        iq->noise[n],prm->mxpwr,prm->atten*atstp,
                        thr,lmt,&abflg);
        
       
-      ACFCalculate(&tprm,ptr,rngoff,skpval !=0,
+      ACFCalculate(&tprm,ptr,rngoff,skpval !=0, /* rngoff used to be 2*iq->chnum ASREIMER */
 		   roff,ioff,mplgs,
-	  	   lag,acfd,ACF_PART,2,badrng,iq->atten[n]*atstp,NULL);
+	  	   lag,acfd,ACF_PART,xcfoff,badrng,iq->atten[n]*atstp,NULL);
 
       if (prm->xcf==1) ACFCalculate(&tprm,ptr,
-				     rngoff,skpval !=0,
+				     rngoff,skpval !=0, /* rngoff used to be 2*iq->chnum ASREIMER */
                                      roff,ioff,prm->mplgs,
-	  	                     lag,xcfd,XCF_PART,2,badrng,
+	  	                     lag,xcfd,XCF_PART,xcfoff,badrng,
 				     iq->atten[n]*atstp,NULL);
 
-     /* if ((n>0) && (iq->atten[n] !=iq->atten[n-1]))
-              ACFNormalize(pwr0,acfd,xcfd,prm->nrang,prm->mplgs,atstp); */
+      if ((n>0) && (iq->atten[n] !=iq->atten[n-1]))
+              ACFNormalize(pwr0,acfd,xcfd,prm->nrang,prm->mplgs,atstp); 
           
 
     }   
