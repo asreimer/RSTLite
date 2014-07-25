@@ -177,6 +177,7 @@ int main (int argc,char *argv[]) {
   int rngoff;
   int xcfoff;
   /* End ASREIMER */
+  int chnnum;
 
   prm=RadarParmMake();
   iq=IQMake();
@@ -217,8 +218,13 @@ int main (int argc,char *argv[]) {
   OptionAdd(&opt,"qi",'x',&qiflg);
   OptionAdd(&opt,"skip",'i',&skpval);
   OptionAdd(&opt,"d",'x',&digital);  /* Added d option so we can process IQ data from digital receivers ASREIMER */
+  OptionAdd(&opt,"chnnum",'i',&chnnum);  /* Added chnnum override flag in case wrong number of channels is in iqdat ASREIMER */
 
   arg=OptionProcess(1,argc,argv,&opt,NULL);
+
+  if (chnnum > 0 ) {
+    fprintf(stderr,"Using override chnnum = %d \n",chnnum);
+  }
 
   if (help==1) {
     OptionPrintInfo(stdout,hlpstr);
@@ -339,7 +345,11 @@ int main (int argc,char *argv[]) {
        If processing IQ from a digital receiver we
        have a different range offset than if analogue */
 
-    rngoff = 2*iq->chnnum;
+    if (chnnum > 0) {
+      rngoff = 2*chnnum;
+    } else {
+      rngoff = 2*iq->chnnum;
+    }
 
     /* Properly process xcf for IQ from digital receivers.*/
     if (digital) {
