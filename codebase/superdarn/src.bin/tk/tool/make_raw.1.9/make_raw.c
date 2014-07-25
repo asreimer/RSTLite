@@ -349,7 +349,6 @@ int main (int argc,char *argv[]) {
         xcfoff = 0;
       }
     } else {
-      rngoff = 2*iq->chnnum;
       if (prm->xcf==1) {
         xcfoff = 2;
       } else {
