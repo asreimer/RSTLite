@@ -257,7 +257,7 @@ int main (int argc,char *argv[]) {
       fprintf(stderr,"%d-%d-%d %d:%d:%d beam=%d\n",prm->time.yr,prm->time.mo,
 	     prm->time.dy,prm->time.hr,prm->time.mt,prm->time.sc,prm->bmnum);
 
-    
+    prm->scf=1; //Added so that self clutter is calculated ad written to the rawacf file.
     /* get the hardware info */
 
      radar=RadarGetRadar(network,prm->stid);
@@ -415,7 +415,8 @@ int main (int argc,char *argv[]) {
     RawSetPwr(raw,prm->nrang,pwr0,0,NULL);
     RawSetACF(raw,prm->nrang,prm->mplgs,acfd,0,NULL);
     RawSetXCF(raw,prm->nrang,prm->mplgs,xcfd,0,NULL);
-     
+    RawSetSCF(raw,prm->nrang,prm->mplgs,scfd,0,NULL);
+ 
     raw->thr=thrsh;
     RawFwrite(stdout,prm,raw);
    
