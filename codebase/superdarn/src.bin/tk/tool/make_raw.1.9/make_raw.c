@@ -28,9 +28,8 @@
 VERSION 1.9 ASREIMER
 EDITS to make_raw so IQ data from digital receivers
 can be properly processed into rawacf files by this 
-code. Issue was that rngoff was hard-coded in such a
-way as to set it to 4 for digital receivers. See below.
-The xcf is also properly processed with these edits.
+code. Issue was that xcfoff was hard-coded in such a
+way as to set it to 2, even for digital receivers. See below.
 **************************************
 
 ADDED FROM ACFCALCULATE DOCUMENTATION:
@@ -47,22 +46,27 @@ ADDED FROM ACFCALCULATE DOCUMENTATION:
   * The differences in implementation are handled by a combination
   * of the rngoff and xcfoff arguments.
   *
-  * Analogue receiver:    rngoff        xcfoff
+  * Analogue receiver:    rngoff        xcfoff    (IQ samples for main and interferometer arrays are interleved)
+  *                                               
+  * No XCFs                 2             0       (this code expects iq->chnnum = 1)
+  * With XCFs               4             2       (this code expects iq->chnnum = 2)
   *
-  * No XCFs                 2             0
-  * With XCFs               4             2
-  *
-  * Digital Receiver      rngoff        xcfoff
+  * Digital Receiver      rngoff        xcfoff    (All IQ for main then all IQ for interferometer)
   * (APL & Saskatoon)     
-  * No XCFs                 2             0
-  * With XCFs               2             nsamp
+  * No XCFs                 2             0       (this code expects iq->chnnum = 1)
+  * With XCFs               2             nsamp   (this code expects iq->chnnum = 1)
+  *                                               (this code expects nsamp = 2*iq->smpnum)
   *
   * Digital Receiver      rngoff        xcfoff
   * (Alaska)
   * No XCFs                 2             0
   * With XCFs               2             8192 (half DMA buffer size)
   *
-
+  *
+  *
+  * IMPORTANT THINGS TO NOTE:
+  * -- iq->chnnum should NEVER be 2 unless IQ is from an analogue receiever.
+  * -- Each I and Q values are stored as 16-bit numbers whereas iq->smpnum counts IQ pairs.
 */
 
 #include <stdio.h>
@@ -334,8 +338,11 @@ int main (int argc,char *argv[]) {
     /* ASREIMER 23 July 2014
        If processing IQ from a digital receiver we
        have a different range offset than if analogue */
+
+    rngoff = 2*iq->chnnum;
+
+    /* Properly process xcf for IQ from digital receivers.*/
     if (digital) {
-      rngoff = iq->chnnum;
       if (prm->xcf==1) {
         xcfoff = 2*iq->smpnum;
       } else {
@@ -349,6 +356,7 @@ int main (int argc,char *argv[]) {
         xcfoff = 0;
       }
     }
+
     /* End ASREIMER */
 
     for (n=0;n<iq->seqnum;n++) {
@@ -373,7 +381,7 @@ int main (int argc,char *argv[]) {
 	  	                     lag,xcfd,XCF_PART,xcfoff,badrng,
 				     iq->atten[n]*atstp,NULL);
 
-      if ((n>0) && (iq->atten[n] !=iq->atten[n-1]))
+      if ((n>0) && (iq->atten[n] != iq->atten[n-1]))
               ACFNormalize(pwr0,acfd,xcfd,prm->nrang,prm->mplgs,atstp); 
           
 
