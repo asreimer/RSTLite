@@ -48,7 +48,7 @@ struct RawData *RawMake() {
   for (n=0;n<2;n++) {
     ptr->acfd[n]=NULL;
     ptr->xcfd[n]=NULL;
-    ptr->scfd[n]=NULL; //Added for self clutter
+    ptr->scfd[n]=NULL; /*Added for self clutter estimate*/
   }
   return ptr;
 }
@@ -60,7 +60,7 @@ void RawFree(struct RawData *ptr) {
   for (n=0;n<2;n++) {
     if (ptr->acfd[n] !=NULL) free(ptr->acfd[n]);
     if (ptr->xcfd[n] !=NULL) free(ptr->xcfd[n]);
-    if (ptr->scfd[n] !=NULL) free(ptr->scfd[n]); //Added for self clutter
+    if (ptr->scfd[n] !=NULL) free(ptr->scfd[n]); /*Added for self clutter estimate*/
   }
   free(ptr);
   return;
@@ -163,7 +163,7 @@ int RawSetXCF(struct RawData *ptr,int nrang,int mplgs,float *xcfd,int snum,int *
 }
 
 
-//ADDED FOR SELF CLUTTER
+/*Added for self clutter estimate*/
 int RawSetSCF(struct RawData *ptr,int nrang,int mplgs,float *scfd,int snum,int *slist) {
   float *tmp=NULL;
   int n,x,y,s;
@@ -200,7 +200,7 @@ int RawSetSCF(struct RawData *ptr,int nrang,int mplgs,float *scfd,int snum,int *
   return 0;
 }
 
-//END
+/*END*/
 
 void *RawFlatten(struct RawData *ptr,int nrang,int mplgs,size_t *size) {
   size_t s;
@@ -217,8 +217,8 @@ void *RawFlatten(struct RawData *ptr,int nrang,int mplgs,size_t *size) {
     if (ptr->acfd[n] !=NULL) s+=(nrang*mplgs)*sizeof(float);
   for (n=0;n<2;n++) 
     if (ptr->xcfd[n] !=NULL) s+=(nrang*mplgs)*sizeof(float);
-  for (n=0;n<2;n++) //ADDED FOR SELF CLUTTER
-    if (ptr->scfd[n] !=NULL) s+=(nrang*mplgs)*sizeof(float); 
+  for (n=0;n<2;n++)                                          /*Added for self clutter estimate*/
+    if (ptr->scfd[n] !=NULL) s+=(nrang*mplgs)*sizeof(float); /*Added for self clutter estimate*/
   buf=malloc(s);
   if (buf==NULL) return NULL;
   *size=s; 
@@ -248,14 +248,14 @@ void *RawFlatten(struct RawData *ptr,int nrang,int mplgs,size_t *size) {
     p+=(nrang*mplgs)*sizeof(float); 
   }
 
-//ADDED FOR SELF CLUTTER
+/*Added for self clutter estimate*/
   for (n=0;n<2;n++) {
     if (ptr->scfd[n]==NULL) continue; 
     memcpy(buf+p,ptr->scfd[n],(nrang*mplgs)*sizeof(float));
     r->scfd[n]=(void *) p;
     p+=(nrang*mplgs)*sizeof(float); 
   }
-//END
+/*End*/
 
   return buf;
 }
@@ -271,8 +271,8 @@ int RawExpand(struct RawData *ptr,int nrang,int mplgs,void *buffer) {
     if (ptr->acfd[n] !=NULL) free(ptr->acfd[n]);
   for (n=0;n<2;n++) 
     if (ptr->xcfd[n] !=NULL) free(ptr->xcfd[n]);
-  for (n=0;n<2;n++) //ADDED FOR SELF CLUTTER
-    if (ptr->scfd[n] !=NULL) free(ptr->scfd[n]);
+  for (n=0;n<2;n++)                              /*Added for self clutter estimate*/
+    if (ptr->scfd[n] !=NULL) free(ptr->scfd[n]); /*Added for self clutter estimate*/
   memcpy(ptr,buffer,sizeof(struct RawData));
 
   if (ptr->pwr0 !=NULL) {
@@ -294,14 +294,14 @@ int RawExpand(struct RawData *ptr,int nrang,int mplgs,void *buffer) {
     ptr->xcfd[n]=malloc((nrang*mplgs)*sizeof(float));
     memcpy(ptr->xcfd[n],p,(nrang*mplgs)*sizeof(float));
   }
-//ADDED FOR SELF CLUTTER
+/*Added for self clutter estimate*/
   for (n=0;n<2;n++) {
     if (ptr->scfd[n]==NULL) continue;
     p=buffer+(size_t) ptr->scfd[n]; 
     ptr->scfd[n]=malloc((nrang*mplgs)*sizeof(float));
     memcpy(ptr->scfd[n],p,(nrang*mplgs)*sizeof(float));
   }
-//END
+/*END*/
   return 0;
 }
 

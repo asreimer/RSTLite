@@ -48,7 +48,7 @@ int RawEncode(struct DataMap *ptr,struct RadarParm *prm,struct RawData *raw) {
   int16 *slist=NULL;
   float *acfd=NULL;
   float *xcfd=NULL;
-  float *scfd=NULL;  //Added for self clutter
+  float *scfd=NULL;  /*Added for self clutter estimate*/
 
   DataMapAddScalar(ptr,"rawacf.revision.major",DATAINT,
 		    &raw->revision.major);
@@ -96,7 +96,7 @@ int RawEncode(struct DataMap *ptr,struct RadarParm *prm,struct RawData *raw) {
   if (snum !=0) {
     acfd=DataMapStoreArray(ptr,"acfd",DATAFLOAT,3,anum,NULL);
     if (prm->xcf !=0) xcfd=DataMapStoreArray(ptr,"xcfd",DATAFLOAT,3,xnum,NULL);
-    if (prm->scf !=0) scfd=DataMapStoreArray(ptr,"scfd",DATAFLOAT,3,scnum,NULL); //Added for self clutter
+    if (prm->scf !=0) scfd=DataMapStoreArray(ptr,"scfd",DATAFLOAT,3,scnum,NULL); /*Added for self clutter estimate*/
     x=0;
     for (c=0;c<prm->nrang;c++) {
       if (raw->pwr0[c]<tx) continue;
@@ -109,7 +109,7 @@ int RawEncode(struct DataMap *ptr,struct RadarParm *prm,struct RawData *raw) {
         xcfd[2*(x*prm->mplgs+d)]=raw->xcfd[0][c*prm->mplgs+d];
         xcfd[2*(x*prm->mplgs+d)+1]=raw->xcfd[1][c*prm->mplgs+d];
       }
-      //Added for self clutter
+      /*Added for self clutter estimate*/
       if (prm->scf !=0) for (d=0;d<prm->mplgs;d++) {
         scfd[2*(x*prm->mplgs+d)]=raw->scfd[0][c*prm->mplgs+d];
         scfd[2*(x*prm->mplgs+d)+1]=raw->scfd[1][c*prm->mplgs+d];

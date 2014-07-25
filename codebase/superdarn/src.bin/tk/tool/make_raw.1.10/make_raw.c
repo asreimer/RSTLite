@@ -121,7 +121,7 @@ struct OptionData opt;
 float *pwr0=NULL;
 float *acfd=NULL;
 float *xcfd=NULL;
-float *scfd=NULL; //self clutter
+float *scfd=NULL; /*Added for self clutter estimate*/
 
 int loadlag(FILE *fp,int *lag[2]) {
   /* load the lag table */
@@ -257,7 +257,7 @@ int main (int argc,char *argv[]) {
       fprintf(stderr,"%d-%d-%d %d:%d:%d beam=%d\n",prm->time.yr,prm->time.mo,
 	     prm->time.dy,prm->time.hr,prm->time.mt,prm->time.sc,prm->bmnum);
 
-    prm->scf=1; //Added so that self clutter is calculated ad written to the rawacf file.
+    prm->scf=1; /*Added so that self clutter is calculated ad written to the rawacf file.*/
     /* get the hardware info */
 
      radar=RadarGetRadar(network,prm->stid);
@@ -306,7 +306,7 @@ int main (int argc,char *argv[]) {
     memset(tmp,0,sizeof(float)*2*prm->nrang*prm->mplgs);
     xcfd=tmp;
 
-    //INITIALIZE THE ARRAY THAT WILL STORE SELF CLUTTER
+    /*Added for self clutter estimate*/
     if (scfd==NULL) tmp=malloc(sizeof(float)*2*prm->nrang*prm->mplgs);
     else tmp=realloc(scfd,sizeof(float)*2*prm->nrang*prm->mplgs);
     if (tmp==NULL) {
@@ -315,7 +315,7 @@ int main (int argc,char *argv[]) {
     }
     memset(tmp,0,sizeof(float)*2*prm->nrang*prm->mplgs);
     scfd=tmp;
-    //END
+    /*END*/
   
     for (i=0;i<2;i++) {
       if (lag[i]==NULL) tmp=malloc(sizeof(int)*(prm->mplgs+1));
@@ -388,7 +388,7 @@ int main (int argc,char *argv[]) {
                        iq->noise[n],prm->mxpwr,prm->atten*atstp,
                        thr,lmt,&abflg);
 
-      //ESTIMATE THE SELF CLUTTER
+      /*ESTIMATE THE SELF CLUTTER*/
       EstimateSelfClutter(&tprm,ptr,rngoff,skpval !=0, /* rngoff used to be 2*iq->chnum ASREIMER */
 		          roff,ioff,mplgs,
 	  	          lag,scfd,ACF_PART,xcfoff,badrng,iq->atten[n]*atstp,NULL);

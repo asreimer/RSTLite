@@ -2,4 +2,4 @@
   =========*/
 
  #define MAJOR_VERSION "1"
- #define MINOR_VERSION "23"
+ #define MINOR_VERSION "22"

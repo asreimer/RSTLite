@@ -40,7 +40,7 @@ struct RawData {
   float *pwr0;
   float *acfd[2];
   float *xcfd[2];
-  float *scfd[2];  //Added for self clutter estimate
+  float *scfd[2];  /*Added for self clutter estimate*/
 };
 
 
@@ -49,7 +49,7 @@ void RawFree(struct RawData *ptr);
 int RawSetPwr(struct RawData *ptr,int nrang,float *pwr0,int snum,int *slist);
 int RawSetACF(struct RawData *ptr,int nrang,int mplgs,float *acfd,int snum,int *slist);
 int RawSetXCF(struct RawData *ptr,int nrang,int mplgs,float *xcfd,int snum,int *slist);
-int RawSetXCF(struct RawData *ptr,int nrang,int mplgs,float *scfd,int snum,int *slist); //Added for self clutter estimate
+int RawSetXCF(struct RawData *ptr,int nrang,int mplgs,float *scfd,int snum,int *slist); /*Added for self clutter estimate*/
 
 void *RawFlatten(struct RawData *ptr,int nrang,int mplgs,size_t *size);
 int RawExpand(struct RawData *ptr,int nrang,int mplgs,void *buffer);

@@ -94,6 +94,7 @@ struct RadarParm {
   int16 frang;
   int16 rsep;
   int16 xcf;
+  int16 scf;  /* Added for self-clutter */
   int16 tfreq;
   int16 offset; 
   int16 ifmode;

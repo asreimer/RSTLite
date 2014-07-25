@@ -97,11 +97,13 @@ int EstimateSelfClutter(struct TSGprm *prm,
    int tp_in_tau;
    int S1,S2;
    int pul;
+   int mppul;
    int re_term1,re_term2,re_term3;
    int im_term1,im_term2,im_term3;
-   int r1[prm->mppul],r2[prm->mppul];           //initialize integer arrays
+   int r1[prm->mppul],r2[prm->mppul];           /*initialize integer arrays*/
    int sample3,sample4;
    int offset3,offset4;
+   int temp;
 
    float dcor1=0;
    float dcor2=0;
@@ -123,21 +125,21 @@ int EstimateSelfClutter(struct TSGprm *prm,
    }
 
    nrang = prm->nrang;
-   smpfr = (prm->lagfr / prm->smsep); //number of voltage samples to the first range
-   mppul = prm->mppul;                //number of pulses in the pulse sequence
+   smpfr = (prm->lagfr / prm->smsep); /*number of voltage samples to the first range*/
+   mppul = prm->mppul;                /*number of pulses in the pulse sequence*/
 
 
    
 
    if (dflg) sdelay=prm->smdelay; /* digital receiver delay term equal to skpnum */
-   sampleunit = (prm->mpinc / prm->smsep) * rngoff; // equal to number of tx pulses
-                                                    // that can fit in one lag time times rngoff (tau/tp)*rngoff
+   sampleunit = (prm->mpinc / prm->smsep) * rngoff; /* equal to number of tx pulses */
+                                                    /* that can fit in one lag time times rngoff (tau/tp)*rngoff */
    tp_in_tau = (prm->mpinc / prm->smsep);
 				 
    for(range=0;range < nrang ; range++) {
 
 
-         //Calculate offsets for the voltage samples for the current range gate
+         /*Calculate offsets for the voltage samples for the current range gate*/
          offset1 = (range+sdelay) * rngoff;
 	 if (xcf == ACF_PART) offset2 = offset1;
 	 else offset2 = ((range+sdelay) * rngoff) + xcfoff;
@@ -146,17 +148,17 @@ int EstimateSelfClutter(struct TSGprm *prm,
 
 
              /* Determine which ranges are intefering in the current lag */
-             //samples are we using for the current lag
+             /* samples are we using for the current lag*/
              S1=tp_in_tau*lagtable[0][lag]+range + smpfr;
              S2=tp_in_tau*lagtable[1][lag]+range + smpfr;
 
              for (pul=0; pul < mppul; pul++) {
-                 //Find the pulses that were transmitted before the samples were recorded
-                 //and then save which range gates each pulse is coming from. 
-                 if (prm->ptab[pul]*tp_in_tau <= S1){
-                     temp = (S1 - prm->ptab[pul]*tp_in_tau - smpfr);
-                     //Also we need to check and make sure we only save interfering range 
-                     //gates where we have valid lag0 power.
+                 /*Find the pulses that were transmitted before the samples were recorded
+                   and then save which range gates each pulse is coming from. */
+                 if (prm->pat[pul]*tp_in_tau <= S1){
+                     temp = (S1 - prm->pat[pul]*tp_in_tau - smpfr);
+                     /*Also we need to check and make sure we only save interfering range 
+                       gates where we have valid lag0 power.*/
                      if ((temp != range) && (temp >= 0) && (temp < nrang) && (temp < badrange)) {
                          r1[pul]= temp;
                      } else {
@@ -165,8 +167,8 @@ int EstimateSelfClutter(struct TSGprm *prm,
                  } else {
                      r1[pul]=-1000;
                  }
-                 if (prm->ptab[pul]*tp_in_tau <= S2){
-                     temp = (S2 - prm->ptab[pul]*tp_in_tau - smpfr);
+                 if (prm->pat[pul]*tp_in_tau <= S2){
+                     temp = (S2 - prm->pat[pul]*tp_in_tau - smpfr);
                      if ((temp != range) && (temp >= 0) && (temp < nrang) && (temp < badrange)) {
                          r2[pul]= temp;
                      } else {
@@ -184,20 +186,20 @@ int EstimateSelfClutter(struct TSGprm *prm,
              im_term2 = 0;
              im_term3 = 0;
 
-             //First term in the summation for the self-clutter estimate (V_r*V_j^*)
+             /*First term in the summation for the self-clutter estimate (V_r*V_j^*)*/
              for (pul=0; pul < mppul; pul++) {
                  if (r2[pul] != -1000) {
 
-                     offset3 = (r2[pul]+sdelay) * rngoff;  //for the interfering voltages from sample #2
-                     //offset4 = (r1[pul]+sdelay) * rngoff;  //for the interfering voltages from sample #1
+                     offset3 = (r2[pul]+sdelay) * rngoff;  /*for the interfering voltages from sample #2*/
+                     /*offset4 = (r1[pul]+sdelay) * rngoff; */ /*for the interfering voltages from sample #1*/
 
                      sample1 = lagtable[0][lag]*sampleunit + offset1;        
                      sample2 = lagtable[1][lag]*sampleunit + offset2;
 
                      sample3 = lagtable[0][0]*sampleunit + offset3;        
-                     //sample4 = lagtable[0][0]*sampleunit + offset4;
+                     /*sample4 = lagtable[0][0]*sampleunit + offset4;*/
 
-                     //Real
+                     /*Real*/
                      temp1 = (float) (inbuf[sample1+ roffset]-dcor1) * 
                              (float) (inbuf[sample3+ roffset]-dcor2);
 
@@ -206,7 +208,7 @@ int EstimateSelfClutter(struct TSGprm *prm,
 
                      re_term1 += temp1 + temp2;
 
-                     //Imaginary
+                     /*Imaginary*/
                      temp1 = (float) (inbuf[sample1 + roffset]-dcor1) *
                              (float) (inbuf[sample3 + ioffset]-dcoi2);
                      temp2 = (float) (inbuf[sample3 + roffset]-dcor2) * 
@@ -216,25 +218,20 @@ int EstimateSelfClutter(struct TSGprm *prm,
                  }
              }
 
-             //Second term in the summation for the self-clutter estimate (V_i*V_r^*)
-             term2 = np.complex(0)
-             if len(interfering_S1):
-                 for i in (interfering_S1):
-                     term2 += power_samples[i]*(power_samples[gate].conjugate())
-
+             /*Second term in the summation for the self-clutter estimate (V_i*V_r^*)*/
              for (pul=0; pul < mppul; pul++) {
                  if (r1[pul] != -1000) {
 
-                     //offset3 = (r2[pul]+sdelay) * rngoff;  //for the interfering voltages from sample #2
-                     offset4 = (r1[pul]+sdelay) * rngoff;  //for the interfering voltages from sample #1
+                     /*offset3 = (r2[pul]+sdelay) * rngoff; */  /*for the interfering voltages from sample #2*/
+                     offset4 = (r1[pul]+sdelay) * rngoff;  /*for the interfering voltages from sample #1*/
 
                      sample1 = lagtable[0][lag]*sampleunit + offset1;        
                      sample2 = lagtable[1][lag]*sampleunit + offset2;
 
-                     //sample3 = lagtable[0][0]*sampleunit + offset3;        
+                     /*sample3 = lagtable[0][0]*sampleunit + offset3;        */
                      sample4 = lagtable[0][0]*sampleunit + offset4;
 
-                     //Real
+                     /*Real*/
                      temp1 = (float) (inbuf[sample4+ roffset]-dcor1) * 
                              (float) (inbuf[sample2+ roffset]-dcor2);
 
@@ -243,7 +240,7 @@ int EstimateSelfClutter(struct TSGprm *prm,
 
                      re_term2 += temp1 + temp2;
 
-                     //Imaginary
+                     /*Imaginary*/
                      temp1 = (float) (inbuf[sample4 + roffset]-dcor1) *
                              (float) (inbuf[sample2 + ioffset]-dcoi2);
                      temp2 = (float) (inbuf[sample2 + roffset]-dcor2) * 
@@ -254,21 +251,21 @@ int EstimateSelfClutter(struct TSGprm *prm,
                  }
              }
 
-             //Third term in the summation for the self-clutter estimate (V_i*V_j^*)
+             /*Third term in the summation for the self-clutter estimate (V_i*V_j^*)*/
              for (pul=0; pul < mppul; pul++) {
                  for (pul=0; pul < mppul; pul++) {
                      if ((r1[pul] != -1000) && (r2[pul] != -1000)) {
 
-                         offset3 = (r2[pul]+sdelay) * rngoff;  //for the interfering voltages from sample #2
-                         offset4 = (r1[pul]+sdelay) * rngoff;  //for the interfering voltages from sample #1
+                         offset3 = (r2[pul]+sdelay) * rngoff;  /*for the interfering voltages from sample #2*/
+                         offset4 = (r1[pul]+sdelay) * rngoff;  /*for the interfering voltages from sample #1*/
 
-                         //sample1 = lagtable[0][lag]*sampleunit + offset1;        
-                         //sample2 = lagtable[1][lag]*sampleunit + offset2;
+                         /*sample1 = lagtable[0][lag]*sampleunit + offset1;        
+                           sample2 = lagtable[1][lag]*sampleunit + offset2;*/
 
                          sample3 = lagtable[0][0]*sampleunit + offset3;        
                          sample4 = lagtable[0][0]*sampleunit + offset4;
 
-                         //Real
+                         /*Real*/
                          temp1 = (float) (inbuf[sample4+ roffset]-dcor1) * 
                                  (float) (inbuf[sample3+ roffset]-dcor2);
     
@@ -277,7 +274,7 @@ int EstimateSelfClutter(struct TSGprm *prm,
 
                          re_term3 += temp1 + temp2;
 
-                         //Imaginary
+                         /*Imaginary*/
                          temp1 = (float) (inbuf[sample4 + roffset]-dcor1) *
                                  (float) (inbuf[sample3 + ioffset]-dcoi2);
                          temp2 = (float) (inbuf[sample3 + roffset]-dcor2) * 
