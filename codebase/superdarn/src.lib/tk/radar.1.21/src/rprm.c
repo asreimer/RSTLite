@@ -291,6 +291,8 @@ int RadarParmDecode(struct DataMap *ptr,struct RadarParm *prm) {
       prm->rsep=*(s->data.sptr);
     if ((strcmp(s->name,"xcf")==0) && (s->type==DATASHORT))
       prm->xcf=*(s->data.sptr);
+    if ((strcmp(s->name,"scf")==0) && (s->type==DATASHORT))
+      prm->scf=*(s->data.sptr);
     if ((strcmp(s->name,"tfreq")==0) && (s->type==DATASHORT))
       prm->tfreq=*(s->data.sptr);
     if ((strcmp(s->name,"mxpwr")==0) && (s->type==DATAINT))
@@ -373,6 +375,7 @@ int RadarParmEncode(struct DataMap *ptr,struct RadarParm *prm) {
   DataMapAddScalar(ptr,"frang",DATASHORT,&prm->frang);
   DataMapAddScalar(ptr,"rsep",DATASHORT,&prm->rsep);
   DataMapAddScalar(ptr,"xcf",DATASHORT,&prm->xcf);
+  DataMapAddScalar(ptr,"scf",DATASHORT,&prm->scf);  //ADDED FOR SELF CLUTTER
   DataMapAddScalar(ptr,"tfreq",DATASHORT,&prm->tfreq);
 
   DataMapAddScalar(ptr,"mxpwr",DATAINT,&prm->mxpwr);
