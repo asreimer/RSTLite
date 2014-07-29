@@ -110,7 +110,7 @@ int EstimateSelfClutter(struct TSGprm *prm,
    float dcoi1=0;
    float dcoi2=0;
 
-   if (dco !=NULL) {
+   if ((dco !=NULL)) {
      if (xcf==ACF_PART) {
        dcor1=dco[0];
        dcor2=dco[0];
@@ -129,15 +129,12 @@ int EstimateSelfClutter(struct TSGprm *prm,
    mppul = prm->mppul;                /*number of pulses in the pulse sequence*/
 
 
-   
-
    if (dflg) sdelay=prm->smdelay; /* digital receiver delay term equal to skpnum */
    sampleunit = (prm->mpinc / prm->smsep) * rngoff; /* equal to number of tx pulses */
                                                     /* that can fit in one lag time times rngoff (tau/tp)*rngoff */
    tp_in_tau = (prm->mpinc / prm->smsep);
-				 
-   for(range=0;range < nrang ; range++) {
 
+   for(range=0;range < nrang ; range++) {
 
          /*Calculate offsets for the voltage samples for the current range gate*/
          offset1 = (range+sdelay) * rngoff;
@@ -146,11 +143,10 @@ int EstimateSelfClutter(struct TSGprm *prm,
 
 	 for(lag=0;lag < mplgs; lag++) {
 
-
              /* Determine which ranges are intefering in the current lag */
              /* samples are we using for the current lag*/
-             S1=tp_in_tau*lagtable[0][lag]+range + smpfr;
-             S2=tp_in_tau*lagtable[1][lag]+range + smpfr;
+             S1=tp_in_tau*lagtable[0][lag] + range + smpfr;
+             S2=tp_in_tau*lagtable[1][lag] + range + smpfr;
 
              for (pul=0; pul < mppul; pul++) {
                  /*Find the pulses that were transmitted before the samples were recorded
@@ -227,7 +223,7 @@ int EstimateSelfClutter(struct TSGprm *prm,
 
                      sample1 = lagtable[0][lag]*sampleunit + offset1;        
                      sample2 = lagtable[1][lag]*sampleunit + offset2;
-
+	
                      /*sample3 = lagtable[0][0]*sampleunit + offset3;        */
                      sample4 = lagtable[0][0]*sampleunit + offset4;
 
@@ -296,8 +292,7 @@ int EstimateSelfClutter(struct TSGprm *prm,
                real=real/atten;
                imag=imag/atten;
              }
-
-      
+     
              /* Save the clutter estimate to the scbuf (self-clutter buffer) */
              scbuf[range*(2*mplgs)+2*lag]   = real + scbuf[range*(2*mplgs)+2*lag];
              scbuf[range*(2*mplgs)+2*lag+1] = imag + scbuf[range*(2*mplgs)+2*lag+1];

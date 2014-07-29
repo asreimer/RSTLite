@@ -32,12 +32,13 @@
 #include <time.h>
 
 int ACFAverage(float *pwr0,float *acfd,
-		 float *xcfd,int nave,int nrang,int mplgs) {
+		 float *xcfd,float *scfd,int nave,int nrang,int mplgs) {
    int range;
    int lag;
    
    float *acfdptr=NULL;
    float *xcfdptr=NULL;
+   float *scfdptr=NULL;
    float *pwr0ptr=NULL;
  
 
@@ -47,7 +48,8 @@ int ACFAverage(float *pwr0,float *acfd,
    for (range = 0; range < nrang ; range++) {
      acfdptr = &acfd[range*(2*mplgs)];
      if (xcfd !=NULL) xcfdptr = &xcfd[range*(2*mplgs)];
-	      
+     if (scfd !=NULL) scfdptr = &scfd[range*(2*mplgs)];
+
        for(lag=0;lag < mplgs ; lag++) {
 
        *acfdptr = *acfdptr / nave;   
@@ -59,6 +61,12 @@ int ACFAverage(float *pwr0,float *acfd,
          xcfdptr++;
          *xcfdptr = *xcfdptr / nave;   /* imag */
          xcfdptr++; 
+        }
+       if(scfdptr !=NULL) {
+         *scfdptr = *scfdptr / nave;  /* real */
+         scfdptr++;
+         *scfdptr = *scfdptr / nave;   /* imag */
+         scfdptr++; 
         }
       } 
       *pwr0ptr = *pwr0ptr / nave;

@@ -186,6 +186,7 @@ int main (int argc,char *argv[]) {
   int rngoff;
   int xcfoff;
   /* End ASREIMER */
+  int chnnum;
 
   prm=RadarParmMake();
   iq=IQMake();
@@ -226,8 +227,13 @@ int main (int argc,char *argv[]) {
   OptionAdd(&opt,"qi",'x',&qiflg);
   OptionAdd(&opt,"skip",'i',&skpval);
   OptionAdd(&opt,"d",'x',&digital);  /* Added d option so we can process IQ data from digital receivers ASREIMER */
+  OptionAdd(&opt,"chnnum",'i',&chnnum);  /* Added chnnum override flag in case wrong number of channels is in iqdat ASREIMER */
 
   arg=OptionProcess(1,argc,argv,&opt,NULL);
+
+  if (chnnum > 0 ) {
+    fprintf(stderr,"Using override chnnum = %d \n",chnnum);
+  }
 
   if (help==1) {
     OptionPrintInfo(stdout,hlpstr);
@@ -358,7 +364,11 @@ int main (int argc,char *argv[]) {
        If processing IQ from a digital receiver we
        have a different range offset than if analogue */
 
-    rngoff = 2*iq->chnnum;
+    if (chnnum > 0) {
+      rngoff = 2*chnnum;
+    } else {
+      rngoff = 2*iq->chnnum;
+    }
 
     /* Properly process xcf for IQ from digital receivers.*/
     if (digital) {
@@ -381,7 +391,6 @@ int main (int argc,char *argv[]) {
 
       ptr=samples+iq->offset[n];
 
-
       aflg=ACFSumPower(&tprm,mplgs,lag,pwr0,
 		       ptr,rngoff,skpval !=0, /* rngoff used to be 2*iq->chnum ASREIMER */
                        roff,ioff,badrng,
@@ -389,10 +398,11 @@ int main (int argc,char *argv[]) {
                        thr,lmt,&abflg);
 
       /*ESTIMATE THE SELF CLUTTER*/
-      EstimateSelfClutter(&tprm,ptr,rngoff,skpval !=0, /* rngoff used to be 2*iq->chnum ASREIMER */
+
+      EstimateSelfClutter(&tprm,ptr,rngoff,skpval !=0, 
 		          roff,ioff,mplgs,
-	  	          lag,scfd,ACF_PART,xcfoff,badrng,iq->atten[n]*atstp,NULL);
-      
+	  	          lag,scfd,ACF_PART,xcfoff,badrng,iq->atten[n]*atstp,NULL); 
+
       ACFCalculate(&tprm,ptr,rngoff,skpval !=0, /* rngoff used to be 2*iq->chnum ASREIMER */
 		   roff,ioff,mplgs,
 	  	   lag,acfd,ACF_PART,xcfoff,badrng,iq->atten[n]*atstp,NULL);
@@ -410,7 +420,7 @@ int main (int argc,char *argv[]) {
     }   
    
      
-    ACFAverage(pwr0,acfd,xcfd,prm->nave,prm->nrang,prm->mplgs);
+    ACFAverage(pwr0,acfd,xcfd,scfd,prm->nave,prm->nrang,prm->mplgs);
     
     RawSetPwr(raw,prm->nrang,pwr0,0,NULL);
     RawSetACF(raw,prm->nrang,prm->mplgs,acfd,0,NULL);

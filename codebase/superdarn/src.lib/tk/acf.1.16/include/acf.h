@@ -54,7 +54,7 @@ int ACFCalculate(struct TSGprm *prm,
                  int badrange,float atten,float *dco);
 
 int ACFAverage(float *pwr0,float *acfd,
-	       float *xcfd,
+	       float *xcfd,float *scfd,
                int nave,int nrang,int mplgs);
 
 int ACFBadLagZero(struct TSGprm *prm,int mplgs,int *lagtable[2]);

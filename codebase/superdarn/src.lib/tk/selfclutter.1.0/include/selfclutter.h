@@ -31,15 +31,6 @@
 
 
 
-#ifndef _ACF_H
-#define _ACF_H
-
-
-#define ACF_PART 0
-#define XCF_PART 1
-
-
-
 int EstimateSelfClutter(struct TSGprm *prm,
  		 int16 *inbuf,int rngoff,int dflg,
 		 int roffset,int ioffset,
@@ -50,4 +41,4 @@ int EstimateSelfClutter(struct TSGprm *prm,
 
 
 
-#endif
+

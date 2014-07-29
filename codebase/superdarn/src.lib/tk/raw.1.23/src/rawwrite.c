@@ -43,7 +43,7 @@ int RawEncode(struct DataMap *ptr,struct RadarParm *prm,struct RawData *raw) {
   int c,d,x;
   int32 p0num,snum;
   int32 anum[3],xnum[3];
-  int32 scnum[3]; 
+  int32 scnum[3]; /*Added for self clutter estimate*/
 
   int16 *slist=NULL;
   float *acfd=NULL;
@@ -96,7 +96,7 @@ int RawEncode(struct DataMap *ptr,struct RadarParm *prm,struct RawData *raw) {
   if (snum !=0) {
     acfd=DataMapStoreArray(ptr,"acfd",DATAFLOAT,3,anum,NULL);
     if (prm->xcf !=0) xcfd=DataMapStoreArray(ptr,"xcfd",DATAFLOAT,3,xnum,NULL);
-    if (prm->scf !=0) scfd=DataMapStoreArray(ptr,"scfd",DATAFLOAT,3,scnum,NULL); /*Added for self clutter estimate*/
+    if (prm->scf !=0) scfd=DataMapStoreArray(ptr,"scfd",DATAFLOAT,3,anum,NULL); /*Added for self clutter estimate*/
     x=0;
     for (c=0;c<prm->nrang;c++) {
       if (raw->pwr0[c]<tx) continue;
