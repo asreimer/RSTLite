@@ -98,8 +98,8 @@ int EstimateSelfClutter(struct TSGprm *prm,
    int S1,S2;
    int pul,pul1,pul2;
    int mppul;
-   float re_term1,re_term2,re_term3;
-   float im_term1,im_term2,im_term3;
+   int re_term1,re_term2,re_term3,re_term4;
+   int im_term1,im_term2,im_term3,im_term4;
    int r1[prm->mppul],r2[prm->mppul];           /*initialize integer arrays*/
    int sample3,sample4;
    int offset3,offset4;
@@ -177,10 +177,13 @@ int EstimateSelfClutter(struct TSGprm *prm,
 
              re_term1 = 0;
              re_term2 = 0;
-             re_term3 = 0;
              im_term1 = 0;
              im_term2 = 0;
+             re_term3 = 0;
+             re_term4 = 0;
              im_term3 = 0;
+             im_term4 = 0;
+
 
              if ((range >= badrange) && (lag == 0)) {
                  sample1 =lagtable[0][mplgs]*sampleunit + offset1;        
@@ -190,112 +193,44 @@ int EstimateSelfClutter(struct TSGprm *prm,
                  sample2 =lagtable[1][lag]*sampleunit + offset2;
              }
 
-             /*First term in the summation for the self-clutter estimate (V_r*V_j^*)*/
-             for (pul=0; pul < mppul; pul++) {
-                 if (r2[pul] != -1000) {
+             re_term1 = (float) (inbuf[sample1+ roffset]);
+             im_term1 = (float) (inbuf[sample1+ ioffset]);
+             re_term2 = (float) (inbuf[sample2+ roffset]);
+             im_term2 = (float) (inbuf[sample2+ ioffset]);
 
-                     /*offset3 = (r1[pul]+sdelay) * rngoff; */ /*for the interfering voltages from sample #1*/
-                     offset4 = (r2[pul]+sdelay) * rngoff;  /*for the interfering voltages from sample #2*/
-
-                    /* sample1 = lagtable[0][0]*sampleunit + offset1;        
-                     sample2 = lagtable[1][0]*sampleunit + offset2; */
-
-                     /*sample3 = lagtable[0][0]*sampleunit + offset3;        */
-                     sample4 = lagtable[0][0]*sampleunit + offset4;
-
-                     /*Real*/
-                     temp1 = (float) (inbuf[sample1+ roffset]) * 
-                             (float) (inbuf[sample4+ roffset]);
-
-                     temp2 = (float) (inbuf[sample1 + ioffset]) * 
-                             (float) (inbuf[sample4 + ioffset]);
-
-                     re_term1 += temp1 + temp2;
-
-                     /*Imaginary*/
-                     temp1 = (float) (inbuf[sample1 + roffset]) *
-                             (float) (inbuf[sample4 + ioffset]);
-                     temp2 = (float) (inbuf[sample1 + ioffset]) * 
-	              	     (float) (inbuf[sample4 + roffset]); 
-                     im_term1 += temp1 - temp2;
-
-                 }
-             }
-
-             /*Second term in the summation for the self-clutter estimate (V_i*V_r^*)*/
-             for (pul=0; pul < mppul; pul++) {
-                 if (r1[pul] != -1000) {
-
-                     offset3 = (r1[pul]+sdelay) * rngoff;  /*for the interfering voltages from sample #1*/
-                     /*offset4 = (r2[pul]+sdelay) * rngoff; */  /*for the interfering voltages from sample #2*/
-
-                     /*sample1 = lagtable[0][0]*sampleunit + offset1;        
-                     sample2 = lagtable[1][0]*sampleunit + offset2;*/
-	
-                     sample3 = lagtable[0][0]*sampleunit + offset3;        
-                     /*sample4 = lagtable[0][0]*sampleunit + offset4;    */
-
-                     /*Real*/
-                     temp1 = (float) (inbuf[sample3+ roffset]) * 
-                             (float) (inbuf[sample2+ roffset]);
-
-                     temp2 = (float) (inbuf[sample3 + ioffset]) * 
-                             (float) (inbuf[sample2 + ioffset]);
-
-                     re_term2 += temp1 + temp2;
-
-                     /*Imaginary*/
-                     temp1 = (float) (inbuf[sample3 + roffset]) *
-                             (float) (inbuf[sample2 + ioffset]);
-                     temp2 = (float) (inbuf[sample3 + ioffset]) * 
-	              	     (float) (inbuf[sample2 + roffset]); 
-
-                     im_term2 += temp1 - temp2;
-
-                 }
-             }
+             re_term3 = (float) (inbuf[sample1+ roffset]);
+             im_term3 = (float) (inbuf[sample1+ ioffset]);
+             re_term4 = (float) (inbuf[sample2+ roffset]);
+             im_term4 = (float) (inbuf[sample2+ ioffset]);
 
              /*Third term in the summation for the self-clutter estimate (V_i*V_j^*)*/
              for (pul1=0; pul1 < mppul; pul1++) {
-                 for (pul2=0; pul2 < mppul; pul2++) {
-                     if ((r1[pul1] != -1000) && (r2[pul2] != -1000)) {
 
-                         offset3 = (r1[pul1]+sdelay) * rngoff;  /*for the interfering voltages from sample #2*/
-                         offset4 = (r2[pul2]+sdelay) * rngoff;  /*for the interfering voltages from sample #1*/
+                 if (r1[pul1] != -1000){
+                     offset3 = (r1[pul1]+sdelay) * rngoff;  /*for the interfering voltages from sample #2*/
+                     sample3 = lagtable[0][0]*sampleunit + offset3;        
 
-                         /*sample1 = lagtable[0][lag]*sampleunit + offset1;        
-                           sample2 = lagtable[1][lag]*sampleunit + offset2;*/
+                     re_term1 -= (float) (inbuf[sample3+ roffset]);
+                     im_term1 -= (float) (inbuf[sample3+ ioffset]);
 
-                         sample3 = lagtable[0][0]*sampleunit + offset3;        
-                         sample4 = lagtable[0][0]*sampleunit + offset4;
+                 }
+             }
 
-                         /*Real*/
-                         temp1 = (float) (inbuf[sample3+ roffset]) * 
-                                 (float) (inbuf[sample4+ roffset]);
-    
-                         temp2 = (float) (inbuf[sample3 + ioffset]) * 
-                                 (float) (inbuf[sample4 + ioffset]);
+             for (pul2=0; pul2 < mppul; pul2++) {
+                 if (r2[pul2] != -1000) {
+                     offset4 = (r2[pul2]+sdelay) * rngoff;  /*for the interfering voltages from sample #1*/
+                     sample4 = lagtable[0][0]*sampleunit + offset4;
 
-                         re_term3 += temp1 + temp2;
+                     re_term2 -= (float) (inbuf[sample4+ roffset]);
+                     im_term2 -= (float) (inbuf[sample4+ ioffset]);
 
-                         /*Imaginary*/
-                         temp1 = (float) (inbuf[sample3 + roffset]) *
-                                 (float) (inbuf[sample4 + ioffset]);
-                         temp2 = (float) (inbuf[sample3 + ioffset]) * 
-	                         (float) (inbuf[sample4 + roffset]); 
-
-                         im_term3 += temp1 - temp2;
-
-                     }
                  }
              }
              
-
              /* sum the real and imaginary acfs */
 
-             real = re_term1 + re_term2 - re_term3;
-             imag = im_term1 + im_term2 - im_term3;
-
+             real = re_term3*re_term4 + im_term3*im_term4 - (re_term1*re_term2 + im_term1*im_term2);
+             imag = re_term3*im_term4 - im_term3*re_term4 - (re_term1*im_term2 - im_term1*re_term2);
 
              if (atten !=0) {
                real=real/atten;

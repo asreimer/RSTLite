@@ -397,15 +397,15 @@ int main (int argc,char *argv[]) {
                        iq->noise[n],prm->mxpwr,prm->atten*atstp,
                        thr,lmt,&abflg);
 
-      /*ESTIMATE THE SELF CLUTTER*/
+      /* rngoff used to be 2*iq->chnum ASREIMER */
+      ACFCalculate(&tprm,ptr,rngoff,skpval !=0,
+		   roff,ioff,mplgs,
+	  	   lag,acfd,ACF_PART,xcfoff,badrng,iq->atten[n]*atstp,NULL); 
 
+      /*ESTIMATE THE SELF CLUTTER*/
       EstimateSelfClutter(&tprm,ptr,rngoff,skpval !=0, 
 		          roff,ioff,mplgs,
 	  	          lag,scfd,ACF_PART,xcfoff,badrng,iq->atten[n]*atstp,NULL); 
-
-      ACFCalculate(&tprm,ptr,rngoff,skpval !=0, /* rngoff used to be 2*iq->chnum ASREIMER */
-		   roff,ioff,mplgs,
-	  	   lag,acfd,ACF_PART,xcfoff,badrng,iq->atten[n]*atstp,NULL);
 
       if (prm->xcf==1) ACFCalculate(&tprm,ptr,
 				     rngoff,skpval !=0, /* rngoff used to be 2*iq->chnum ASREIMER */
