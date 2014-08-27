@@ -9,6 +9,8 @@
 #define PULSE_SIZE 256
 #endif
 
+#include "fitblock.h"
+
 struct datapoints
 {
   double *x;

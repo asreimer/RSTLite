@@ -21,7 +21,7 @@
 #include "badsmp.h"
 #include "badlags.h"
 #include "mpfit.h"
-
+#include "fitblock.h"
 
 /* dbl_cmp
    =========

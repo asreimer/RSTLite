@@ -46,6 +46,8 @@ THE SOFTWARE.
 #include "radar.h"
 #include "iq.h"
 #include "iqwrite.h"
+#include "fitdata.h"
+#include "fitread.h"
 
 struct gates
 {
@@ -54,7 +56,7 @@ struct gates
 	double pow;
 };
 
-
+/* Build the radar parameter structure */
 void makeRadarParm2(struct RadarParm * prm, char * argv[], int argc, int cpid, int nave,
                     int lagfr, double smsep, double noise_lev, double amp0, int n_samples,
                     double dt, int n_pul, int n_lags, int nrang, double rngsep, double freq,
@@ -66,7 +68,7 @@ void makeRadarParm2(struct RadarParm * prm, char * argv[], int argc, int cpid, i
   time (&rawtime);
   timeinfo = gmtime(&rawtime);
 
-	if (prm->origin.time !=NULL) free(prm->origin.time);
+  if (prm->origin.time !=NULL) free(prm->origin.time);
   if (prm->origin.command !=NULL) free(prm->origin.command);
   if (prm->pulse !=NULL) free(prm->pulse);
   for (i=0;i<2;i++) if (prm->lag[i] !=NULL) free(prm->lag[i]);
@@ -102,11 +104,11 @@ void makeRadarParm2(struct RadarParm * prm, char * argv[], int argc, int cpid, i
 	
   prm->time.us = 0;
 
-  prm->txpow = 9000;
-  prm->nave = (int16)nave;
+  prm->txpow = 9000;                              /* Transmitted power in kW */
+  prm->nave = (int16)nave;                        /* Number of samples per average */
   prm->atten = 0;
-  prm->lagfr = (int16)(lagfr*smsep*1e6);
-  prm->smsep = (int16)(smsep*1.e6);
+  prm->lagfr = (int16)(lagfr*smsep*1e6);          /* Lag in time to first range gate (us) */
+  prm->smsep = (int16)(smsep*1.e6);               /* Sample separation in time (us) */
   prm->ercod = 0;
   prm->stat.agc = 8192;
   prm->stat.lopwr = 8192;
@@ -141,19 +143,19 @@ void makeRadarParm2(struct RadarParm * prm, char * argv[], int argc, int cpid, i
 
 
   if(cpid == 1)
-  {
+  { /* Schiffler */
     int16 temp_lag[100] = {0,0,26,27,20,22,9,12,22,26,22,27,20,26,20,27,12,20,0,9,
                                 12,22,9,20,0,12,9,22,12,26,12,27,9,26,9,27};
     RadarParmSetLag(prm,n_lags,temp_lag);
   }
   else if(cpid == 503)
-  {
+  { 
     int16 temp_lag[100] = {0,0,15,16,27,29,29,32,23,27,27,32,23,29,16,23,15,23,
                             23,32,16,27,15,27,16,29,15,29,32,47,16,32,15,32};
     RadarParmSetLag(prm,n_lags,temp_lag);
   }
   else
-  {
+  { /* Katscan */
     int16 temp_lag[100] = {0,0,42,43,22,24,24,27,27,31,22,27,24,31,14,22,22,
                                 31,14,24,31,42,31,43,14,27,0,14,27,42,27,43,14,31,
                                 24,42,24,43,22,42,22,43,0,22,0,24};
@@ -163,7 +165,7 @@ void makeRadarParm2(struct RadarParm * prm, char * argv[], int argc, int cpid, i
   RadarParmSetCombf(prm,"sim_real");
 
 }
-/*this is a driver program from the data simulator*/
+/* this is a driver program from the data simulator */
 
 int main(int argc,char *argv[])
 {
@@ -173,21 +175,20 @@ int main(int argc,char *argv[])
   ********************************************************/
   double t_d = .04;                         /*Irregualrity decay time s*/
   double w = -9999.;                        /*spectral width*/
+  double t_g = 1e-6;                        /*irregularity growth time*/
+  double t_c = 1000.;                       /*precipitation time constant*/
   double v_dop =450.;                       /*Background velocity (m/s)*/
+  double velo = 0;
   double c = 3.e8;                          /*Speed of light (m/s)*/
-  double freq = 12.e6;                      /*transmit frequency*/
+  double lambda;
+  double freq;                              /*transmit frequency*/
   double amp0 = 1.;                         /*amplitude scaling factor*/
   int noise_flg = 1;                        /*flag to indicate whether white noise is included*/
   double noise_lev = 0.;                    /*white noise level (ratio)*/
-  int nave = 50;                            /*number of pulse sequences in an integration period*/
-  int nrang = 100;                          /*number of range gates*/
   int lagfr = 4;                            /*lag to first range*/
   int life_dist = 0;                        /*lifetime distribution*/
-  double smsep = 300.e-6;                   /*sample spearation*/
-  double rngsep = 45.e3;                    /*range gate spearation*/
   int cpid = 150;                             /*control program ID number*/
-  int n_samples;                            /*Number of datapoints in a single pulse sequence*/
-  int n_pul,n_lags,*pulse_t,*tau;
+
   double dt;                                /*basic lag time*/
   int cri_flg = 1;                          /*cross-range interference flag*/
   int smp_flg = 0;                          /*output raw samples flag*/
@@ -198,13 +199,89 @@ int main(int argc,char *argv[])
                                                bizzare terminal behaviour in Ubuntu 14.04 LTS */
 
   /*other variables*/
-  long i,j;
+  int s,lag;
+  long i,j,in_tau;
   double taus;
+  struct RadarParm * prm;
+  struct FitData *fitacf;
+  int nave;
+  int nrang;
 
-	/*fit file to recreate*/
-	char * filename = argv[argc-1];
+  int n_samples;                            /*Number of datapoints in a single pulse sequence*/
+  int n_pul,n_lags,*pulse_t,*tau;
+  double smsep;                     /*sample spearation*/
+  double rngsep;                    /*range gate spearation*/
 
-  /*read the first radar's file*/
+ 
+char helpstr[] =
+  "\nmake_sim:  generates simulated single-component lorentzian ACFs\n\n"
+  "Calling Sequence:  ./sim_fitacf [-options] > output.txt\n"
+  "Options:\n"
+  "--help: show this information\n"
+  "-v_spread v: set gaussian Doppler velocity spread (standard devation) to v\n"
+  "         default is 0\n"
+  "-t_g t: set growth time to t (in microseconds)\n"
+  "         default is 1 us (negligible)\n"
+  "-t_c t: set precipitation time constant (lifetime) to t (in microseconds)\n"
+  "         default is 1e6 ms (negligible)\n"
+  "-noise n: add in white noise level to produce SNR n (in dB)\n"
+  "         default is no noise\n"
+  "-nave n: set number of averages in the integration period to n\n"
+  "         default is 70/50/20 for oldscan/katscan/tauscan\n"
+  "-nocri: remove cross range interference from the ACFs\n"
+  "         default is CRI on\n"
+  "         WARNING: removing cross-range interference will make\n"
+  "         the raw samples unuseable, since each range gate will\n"
+  "         have to be integrated seperately\n"
+  "-samples: output raw samples (to iqdat file) instead of ACFs\n"
+  "         default is output ACFs (to rawacf file)\n"
+  "\nNOTE: all option inputs must be integers\n";
+
+
+
+
+  /*process command line options*/
+  for (i = 1; i < argc; i++)
+  {
+    /*command line velocity spread*/
+    if (strcmp(argv[i], "-v_spread") == 0)
+      velo = (double)atoi(argv[i+1]);
+    /*command line decorrelation time*/
+    else if (strcmp(argv[i], "-t_d") == 0)
+      t_d = 1e-3*atoi(argv[i+1]);
+    /*command line growth time*/
+    else if (strcmp(argv[i], "-t_g") == 0)
+      t_g = 1e-6*atoi(argv[i+1]);
+    /*command line precipitation time constant*/
+    else if (strcmp(argv[i], "-t_c") == 0)
+      t_c = 1e-3*atoi(argv[i+1]);
+    /*command line noise*/
+    else if (strcmp(argv[i], "-noise") == 0)
+    {
+      noise_flg = 1;
+      noise_lev = 1./pow(10.,((double)atoi(argv[i+1]))/10.);
+    }
+    /*command line CRI flag*/
+    else if (strcmp(argv[i], "-nocri") == 0)
+      cri_flg = 0;
+    /*command line output samples*/
+    else if (strcmp(argv[i], "-samples") == 0)
+      smp_flg = 1;
+    /*display help*/
+    else if (strcmp(argv[i], "--help") == 0)
+    {
+      fprintf(stderr,"%s\n",helpstr);
+      exit(0);
+    }
+  }
+
+  /* #############
+     FILE IO STUFF 
+     ############# */
+  /*fit file to recreate*/
+  char * filename = argv[argc-1];
+
+  /* Open the fit file */
   FILE * fitfp=fopen(filename,"r");
   fprintf(stderr,"%s\n",filename);
   if(fitfp==NULL)
@@ -212,184 +289,149 @@ int main(int argc,char *argv[])
     fprintf(stderr,"File %s not found.\n",filename);
     exit(-1);
   }
+ 
 
-  /*fill the parameter structure*/
-  struct RadarParm * prm;
+
+  /* ###################################
+     INITIALIZE STRUCTURES AND VARIABLES
+     ################################### */
+
+  /* Initialize the parameter structure*/
   prm = RadarParmMake();
 
-	/*array with the irregularity decay time for each range gate*/
-	double * t_d_arr = malloc(nrang*sizeof(double));
-	for(i=0;i<nrang;i++)
-		t_d_arr[i] = 0;
+  /* Initialize the fit structure*/
+  fitacf=FitMake();
 
-	/*array with the irregularity growth time for each range gate*/
-	double * t_g_arr = malloc(nrang*sizeof(double));
-	for(i=0;i<nrang;i++)
-		t_g_arr[i] = 1.e-6;
+  fprintf(stderr,"Reading first line of fit file.\n");
+  /* Read the first line of the fit file */
+  s=FitFread(fitfp,prm,fitacf);
+  fprintf(stderr,"Status %d.\n",s);
+  if (s==-1) {
+    fprintf(stderr,"Error reading file.\n");
+    exit(-1);
+  }
 
-	/*array with the irregularity lifetime for each range gate*/
-	double * t_c_arr = malloc(nrang*sizeof(double));
-	for(i=0;i<nrang;i++)
-		t_c_arr[i] = 1000;
 
-	/*array with the irregularity doppler velocity for each range gate*/
-	double * v_dop_arr = malloc(nrang*sizeof(double));
-	for(i=0;i<nrang;i++)
-		v_dop_arr[i] = 0;
+  do
+  {
+        fprintf(stderr,"Loop.\n");
+        /* set some variables for ease of programming/readability */
+        nrang = prm->nrang;
+        nave = prm->nave;
+        n_lags = prm->mplgs;
+        freq = prm->tfreq*1.e3;
+        lambda = c/freq;
+        cpid = prm->cp;
+        n_pul = prm->mppul;
+	rngsep = prm->rsep*1.e3;
+	smsep = prm->smsep*1.e-6;
+	dt = prm->mpinc*1.e-6;
+        lagfr = prm->lagfr/prm->smsep;
 
-	/*array with the irregularity doppler velocity for each range gate*/
-	double * velo_arr = malloc(nrang*sizeof(double));
-	for(i=0;i<nrang;i++)
-		velo_arr[i] = 0;
 
-	/*array with the ACF amplitude for each range gate*/
-	double * amp0_arr = malloc(nrang*sizeof(double));
-	for(i=0;i<nrang;i++)
-		amp0_arr[i] = 0;
+        fprintf(stderr,"Pulse table.\n");
+        /* GET THE PULSE TABLE */
+        pulse_t = malloc(n_pul*sizeof(int));
+	for (i=0;i<prm->mppul;i++) pulse_t[i]=prm->pulse[i];
+
+        fprintf(stderr,"Lags.\n");
+        /* FIGURE OUT WHICH LAGS ARE IN THE MULTIPLE PULSE SEQUENCE */
+        tau = malloc(n_lags*sizeof(int));
+        for (i=0;i<=prm->mplgs;i++) {
+            lag = prm->lag[1][i] - prm->lag[0][i];
+            in_tau = 0;
+
+            for (j=0;j<=prm->mplgs;j++) {
+              if (tau[j] == lag) {
+                in_tau=1;
+              }
+            }
+
+            if (!in_tau) {
+              tau[i]=lag;
+              fprintf(stderr,"%d \n",lag);
+            }
+        }
+
+        /*control program dependent variables*/
+	taus = dt/smsep;                                      /*lag time in samples*/
+	n_samples = (pulse_t[n_pul-1]*taus+nrang+lagfr);      /*number of samples in 1 pulse sequence*/
+
+        fprintf(stderr,"Other arrays.\n");
+
 	
-	/*flags to tell which range gates contain scatter*/
+	double * t_d_arr = malloc(nrang*sizeof(double));
+	double * t_g_arr = malloc(nrang*sizeof(double));
+	double * t_c_arr = malloc(nrang*sizeof(double));
+	double * v_dop_arr = malloc(nrang*sizeof(double));
+	double * velo_arr = malloc(nrang*sizeof(double));
+	double * amp0_arr = malloc(nrang*sizeof(double));
 	int * qflg = malloc(nrang*sizeof(int));
-	for(i=0;i<nrang;i++)
-		qflg[i] = 0;
-
-	/*Creating the output array for ACFs*/
 	complex double ** acfs = malloc(nrang*sizeof(complex double *));
 
+	for(i=0;i<nrang;i++)
+        {
 
-	do
-	{
-
-		rt = fscanf(fitfp,"%d  %d  %d  %d  %d  %d\n",&prm->time.yr,&prm->time.mo,&prm->time.dy,&prm->time.hr,&prm->time.mt,&prm->time.sc);
-		fprintf(stderr,"%d  %d  %d  %d  %d  %d\n",prm->time.yr,prm->time.mo,prm->time.dy,prm->time.hr,prm->time.mt,prm->time.sc);
-		rt = fscanf(fitfp,"%d  %lf  %d  %lf  %d  %d  %lf  %lf  %lf  %d\n",&cpid,&freq,&prm->bmnum,&noise_lev,&nave,&lagfr,&dt,&smsep,&rngsep,&nrang);
-		lagfr /= smsep;
-		rngsep *= 1.e3;
-		smsep *= 1.e-6;
-		dt *= 1.e-6;
-		freq *= 1.e3;
-
-		double lambda = c/freq;
-		if(w != -9999.)
-			t_d = lambda/(w*2.*PI);
-
-		/*oldscan*/
-		if(cpid == 1)
-		{
-			n_pul = 7;                            /*number of pulses*/
-			n_lags = 18;                          /*number of lags in the ACFs*/
-
-			/*fill the pulse table*/
-			pulse_t = malloc(n_pul*sizeof(int));
-			pulse_t[0] = 0;
-			pulse_t[1] = 9;
-			pulse_t[2] = 12;
-			pulse_t[3] = 20;
-			pulse_t[4] = 22;
-			pulse_t[5] = 26;
-			pulse_t[6] = 27;
-
-			/*Creating lag array*/
-			tau = malloc(n_lags*sizeof(int));
-			for(i=0;i<n_lags;i++)
-				tau[i] = i;
-			/*no lag 16*/
-			tau[16] += 1;
-			tau[17] += 1;
+                /*array with the irregularity decay time for each range gate*/
+                if (fitacf->rng[i].qflg) {
+			t_d_arr[i] = lambda/(fitacf->rng[i].w_l*2.*PI);
+		} else {
+			t_d_arr[i] = 1000.0;
 		}
-		/*tauscan*/
-		else if(cpid == 503 || cpid == -3310)
-		{
-			n_pul = 13;                           /*number of pulses*/
-			n_lags = 17;                          /*number of lags in the ACFs*/
+	        /*array with the irregularity growth time for each range gate*/
+		t_g_arr[i] = t_g;
+	        /*array with the irregularity lifetime for each range gate*/
+		t_c_arr[i] = t_c;
+        	/*array with the irregularity doppler velocity for each range gate*/
+		v_dop_arr[i] = fitacf->rng[i].v;
+		/*array with the irregularity doppler velocity for each range gate*/	
+		velo_arr[i] = velo;
+	        /* white noise level */
+	        noise_lev = fitacf->noise.skynoise;
+		/*array with the ACF amplitude for each range gate*/
+                if (fitacf->rng[i].qflg) {
+		    amp0_arr[i] = pow(10.0,fitacf->rng[i].p_0/10.0)*noise_lev; /* THIS IS IN LOG */
+                } else {
+                    amp0_arr[i] = 0;
+                }
+		/*flags to tell which range gates contain scatter*/
+		qflg[i] = fitacf->rng[i].qflg;
+		/*Creating the output array for ACFs*/
+                acfs[i] = malloc(n_lags*sizeof(complex double));
+		for(j=0;j<n_lags;j++) {
+			acfs[i][j] = 0.+I*0.;
+                }
 
-			/*fill the pulse table*/
-			pulse_t = malloc(n_pul*sizeof(int));
-			pulse_t[0] = 0;
-			pulse_t[1] = 15;
-			pulse_t[2] = 16;
-			pulse_t[3] = 23;
-			pulse_t[4] = 27;
-			pulse_t[5] = 29;
-			pulse_t[6] = 32;
-			pulse_t[7] = 47;
-			pulse_t[8] = 50;
-			pulse_t[9] = 52;
-			pulse_t[10] = 56;
-			pulse_t[11] = 63;
-			pulse_t[12] = 64;
-
-			/*Creating lag array*/
-			tau = malloc(n_lags*sizeof(int));
-			for(i=0;i<10;i++)
-				tau[i] = i;
-			/*no lag 10*/
-			for(i=10;i<18;i++)
-				tau[i] = (i+1);
-		}
-		/*katscan (default)*/
-		else
-		{
-			cpid = 150;
-			n_pul = 8;                            /*number of pulses*/
-			n_lags = 23;                          /*number of lags in the ACFs*/
-
-			/*fill the pulse table*/
-			pulse_t = malloc(n_pul*sizeof(int));
-			pulse_t[0] = 0;
-			pulse_t[1] = 14;
-			pulse_t[2] = 22;
-			pulse_t[3] = 24;
-			pulse_t[4] = 27;
-			pulse_t[5] = 31;
-			pulse_t[6] = 42;
-			pulse_t[7] = 43;
-			/*Creating lag array*/
-			tau = malloc(n_lags*sizeof(int));
-			for(i=0;i<6;i++)
-				tau[i] = i;
-			/*no lag 6*/
-			for(i=6;i<22;i++)
-				tau[i] = (i+1);
-			/*no lag 23*/
-			tau[22] = 24;
-		}
+                fprintf(stderr,"%lf  %lf  %lf  %lf  %lf  %lf  %lf  %d  %lf  %lf\n", t_d_arr[i],
+                        t_g_arr[i], t_c_arr[i], v_dop_arr[i], velo_arr[i], noise_lev, amp0_arr[i], 
+                        qflg[i], creal(acfs[i][0]), cimag(acfs[i][0]));
+        }
 
 
+		fprintf(stderr,"%hd  %hd  %hd  %hd  %hd  %hd\n",prm->time.yr,prm->time.mo,
+                        prm->time.dy,prm->time.hr,prm->time.mt,prm->time.sc);
+                fprintf(stderr,"%d  %lf %lf  %hd  %lf  %d  %d  %lf  %lf  %lf  %d\n",cpid,freq, lambda,
+                        prm->bmnum,noise_lev,nave,lagfr,dt,smsep,rngsep,nrang);
 
-		/*control program dependent variables*/
-		taus = dt/smsep;                                      /*lag time in samples*/
-		n_samples = (pulse_t[n_pul-1]*taus+nrang+lagfr);      /*number of samples in 1 pulse sequence*/
 
 		/*create a structure to store the raw samples from each pulse sequence*/
 		complex double * raw_samples = malloc(n_samples*nave*sizeof(complex double));
+                /*fprintf(stderr, "makeRadarParm2 \n");
 		makeRadarParm2(prm, argv, argc, cpid, nave, lagfr, smsep, noise_lev, amp0, n_samples,
                     dt, n_pul, n_lags, nrang, rngsep, freq, pulse_t,prm->time.yr,prm->time.mo,
-										prm->time.dy,prm->time.hr,prm->time.mt,prm->time.sc,prm->bmnum);
+		    prm->time.dy,prm->time.hr,prm->time.mt,prm->time.sc,prm->bmnum);*/
 
-		/**********************************************************
-		****FILL THESE ARRAYS WITH THE SIMULATION PARAMETERS*******
-		**********************************************************/
-		for(i=0;i<nrang;i++)
-		{
-			rt = fscanf(fitfp,"%*d  %d  %lf  %lf  %lf\n",&qflg[i],&v_dop,&amp0,&t_d);
-			t_d = lambda/(t_d*2.*PI);
-			if(t_d > 999999.) t_d = 0.;
-			t_d_arr[i] = t_d;
-
-			v_dop_arr[i] = v_dop;
-			
-			amp0 = noise_lev*pow(10.,(amp0/10.));
-			amp0_arr[i] = amp0;
-
-			acfs[i] = malloc(n_lags*sizeof(complex double));
-			for(j=0;j<n_lags;j++)
-				acfs[i][j] = 0.+I*0.;
-		}
-		
 		/*call the simulation function*/
+                fprintf(stderr, "sim_data \n");
+                cpid = 150;
 		sim_data(t_d_arr, t_g_arr, t_c_arr, v_dop_arr, qflg, velo_arr, amp0_arr, freq, noise_lev,
 							noise_flg, nave, nrang, lagfr, smsep, cpid, life_dist,
 							n_pul, cri_flg, n_lags, pulse_t, tau, dt, raw_samples, acfs, decayflg);
+
+                for(i=0;i<nrang;i++)
+		{
+                	fprintf(stderr,"%lf %lf \n", creal(acfs[i][0]),cimag(acfs[i][0]));
+                }
 
 		if(!smp_flg)
 		{
@@ -459,22 +501,24 @@ int main(int argc,char *argv[])
 		free(pulse_t);
 		free(tau);
 		free(raw_samples);
-		for(i=0;i<nrang;i++)
-			free(acfs[i]);
-	} while(!feof(fitfp));
 
-  /*free dynamically allocated memory*/
-  for(i=0;i<nrang;i++)
-    free(acfs[i]);
-  free(acfs);
-  free(qflg);
-  free(t_d_arr);
-  free(t_g_arr);
-  free(t_c_arr);
-  free(v_dop_arr);
-  free(velo_arr);
-  free(amp0_arr);
-	fclose(fitfp);
+        /*free dynamically allocated memory*/
+        for(i=0;i<nrang;i++)
+          free(acfs[i]);
+        free(acfs);
+        free(qflg);
+        free(t_d_arr);
+        free(t_g_arr);
+        free(t_c_arr);
+        free(v_dop_arr);
+        free(velo_arr);
+        free(amp0_arr);
+ 
+
+  } while ((s=FitFread(fitfp,prm,fitacf)) !=-1);
+
+  FitFree(fitacf);
+  fclose(fitfp);
 
 
   return 0;

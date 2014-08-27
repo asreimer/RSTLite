@@ -46,6 +46,7 @@
 #include "fitblk.h"
 #include "dofit.h"
 #include "fitacfversion.h"
+#include "fitblock.h"
 
 #define GOOSEBAY 1
 
