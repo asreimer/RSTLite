@@ -244,6 +244,8 @@ char helpstr[] =
 	complex double ** acfs = malloc(nrang*sizeof(complex double *));
         /*create a structure to store the raw samples from each pulse sequence*/
 	complex double * raw_samples = malloc(n_samples*nave*sizeof(complex double));
+        for(i=0; i < n_samples*nave; i++)
+            raw_samples[i] = 0. + I*0.;
 
 	for(i=0;i<nrang;i++)
         {
@@ -263,10 +265,10 @@ char helpstr[] =
 		/*array with the irregularity doppler velocity for each range gate*/	
 		velo_arr[i] = velo;
 	        /* white noise level */
-	        noise_lev = fitacf->noise.skynoise;
+	        noise_lev = fitacf->noise.skynoise; /*prm->noise.search;*/
 		/*array with the ACF amplitude for each range gate*/
                 if (fitacf->rng[i].qflg) {
-		    amp0_arr[i] = pow(10.0,fitacf->rng[i].p_0/10.0)*noise_lev + noise_lev;
+		    amp0_arr[i] = pow(10.0,fitacf->rng[i].p_0/10.0)*noise_lev;
                 } else {
                     amp0_arr[i] = 0;
                 }
@@ -293,6 +295,7 @@ char helpstr[] =
 
 		/*call the simulation function*/
                 cpid = 150;
+                        fprintf(stderr,"SIMDATA");
 		sim_data(t_d_arr, t_g_arr, t_c_arr, v_dop_arr, qflg, velo_arr, amp0_arr, freq, noise_lev,
 							noise_flg, nave, nrang, lagfr, smsep, cpid, life_dist,
 							n_pul, cri_flg, n_lags, pulse_t, tau, dt, raw_samples, acfs, decayflg);
@@ -332,6 +335,7 @@ char helpstr[] =
 			free(pwr0);
 			free(acfd);
 			free(xcfd);
+                        RawFree(raw);
 		}
 		else
 		{
@@ -339,9 +343,31 @@ char helpstr[] =
 			struct IQ *iq;
 			iq=IQMake();
 
-			int16 * samples = malloc(n_samples*nave*2*2*sizeof(int16));
+			iq->revision.major = 1;
+			iq->revision.minor = 1;
+                        iq->seqnum = nave;
+                        iq->chnnum = 1;
+                        iq->smpnum = n_samples;
+                        iq->skpnum = lagfr;
+
+ 
+ 			int16 * samples = malloc(n_samples*nave*2*2*sizeof(int16));
+                        int * offset = malloc(nave*sizeof(int));
+                        float * noise = malloc(nave*sizeof(float));
+                        int * atten = malloc(nave*sizeof(int));
+                        struct timespec * time = malloc(nave*sizeof(struct timespec));
+                        int * size = malloc(nave*sizeof(int));
+
+                        fprintf(stderr,"SETTING SAMPLES.");
 			for(i=0;i<nave;i++)
 			{
+                                offset[i] = i*n_samples*2*2;
+                                noise[i] = noise_lev;
+                                atten[i] = 0;
+
+                                time[i].tv_sec = 0;
+                                time[i].tv_nsec = 0;
+                                size[i] = n_samples*2*2;
 				/*main array samples*/
 				for(j=0;j<n_samples;j++)
 				{
@@ -351,16 +377,29 @@ char helpstr[] =
 				/*interferometer array samples*/
 				for(j=0;j<n_samples;j++)
 				{
-					samples[i*n_samples*2*2+j*2+n_samples] = 0;
-					samples[i*n_samples*2*2+j*2+1+n_samples] = 0;
+					samples[i*n_samples*2*2+j*2+n_samples*2] = 0;
+					samples[i*n_samples*2*2+j*2+1+n_samples*2] = 0;
 				}
 			}
 
-			int * badtr = malloc(nave*n_pul*2*sizeof(int));
+			unsigned int * badtr = malloc(nave*n_pul*2*sizeof(unsigned int));
 
+                        IQSetAtten(iq,nave,atten);
+                        IQSetNoise(iq,nave,noise);
+                        IQSetOffset(iq,nave,offset); /* offset into the sample buffer */
+                        IQSetSize(iq,nave,size);
+                        IQSetTime(iq,nave,time);
+                        fprintf(stderr,"WRITING IQ");
 			IQFwrite(stdout,prm,iq,badtr,samples);
+                        fprintf(stderr,"WRITTEN IQ\n");
+                        free(time);
+                        free(size);
+                        free(offset);
+                        free(noise);
+                        free(atten);
 			free(samples);
 			free(badtr);
+                        IQFree(iq);
 		}
 
 		free(pulse_t);
