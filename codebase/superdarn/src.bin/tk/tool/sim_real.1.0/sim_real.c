@@ -247,6 +247,9 @@ char helpstr[] =
         for(i=0; i < n_samples*nave; i++)
             raw_samples[i] = 0. + I*0.;
 
+        /* Since iqdat and rawacf files do not calculate the mean noise, let's clear it here */
+        prm->noise.mean = 0.0;
+
 	for(i=0;i<nrang;i++)
         {
 
@@ -265,10 +268,16 @@ char helpstr[] =
 		/*array with the irregularity doppler velocity for each range gate*/	
 		velo_arr[i] = velo;
 	        /* white noise level */
-	        noise_lev = fitacf->noise.skynoise; /*prm->noise.search;*/
+	        noise_lev = sqrt(fitacf->noise.skynoise); /* Need the noise from the clear frequency search! */
 		/*array with the ACF amplitude for each range gate*/
                 if (fitacf->rng[i].qflg) {
-		    amp0_arr[i] = pow(10.0,fitacf->rng[i].p_0/10.0)*noise_lev;
+                    /* Since we are extracting the amplitude from the lag0 from a fit file,
+                       which was derived using the fitacf->noise.skynoise (noise.mean currently 
+                       isn't properly set by fitacf... but noise.skynoise and noise.mean are equal
+                       for fitex files and noise.skynoise for fitex and fitacf are equal so use
+                       that for now */
+                       
+		    amp0_arr[i] = sqrt(pow(10.0,fitacf->rng[i].p_0/10.0)*fitacf->noise.skynoise + fitacf->noise.skynoise);
                 } else {
                     amp0_arr[i] = 0;
                 }
