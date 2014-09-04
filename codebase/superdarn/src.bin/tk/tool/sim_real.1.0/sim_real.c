@@ -107,8 +107,7 @@ char helpstr[] =
   "         default is 1 us (negligible)\n"
   "-t_c t: set precipitation time constant (lifetime) to t (in microseconds)\n"
   "         default is 1e6 ms (negligible)\n"
-  "-noise n: add in white noise level to produce SNR n (in dB)\n"
-  "         default is no noise\n"
+  "-nonoise: do not add noise to the simulation\n"
   "-nave n: set number of averages in the integration period to n\n"
   "         default is 70/50/20 for oldscan/katscan/tauscan\n"
   "-nocri: remove cross range interference from the ACFs\n"
@@ -138,8 +137,7 @@ char helpstr[] =
     /*command line noise*/
     else if (strcmp(argv[i], "-noise") == 0)
     {
-      noise_flg = 1;
-      noise_lev = 1./pow(10.,((double)atoi(argv[i+1]))/10.);
+      noise_flg = 0;
     }
     /*command line CRI flag*/
     else if (strcmp(argv[i], "-nocri") == 0)
