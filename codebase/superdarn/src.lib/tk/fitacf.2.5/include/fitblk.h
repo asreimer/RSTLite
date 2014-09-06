@@ -37,12 +37,6 @@ struct FitPrm {
   double vdir;
 };
 
-struct FitBlock {
-  struct FitPrm prm;
-  struct complex *acfd;
-  struct complex *xcfd;
-};
-
 struct FitElv { /* elevation angle derived from the cross correlation */
   double normal;
   double low;

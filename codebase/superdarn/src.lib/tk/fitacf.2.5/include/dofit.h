@@ -8,6 +8,7 @@
 
 #ifndef _DOFIT_H
 #define _DOFIT_H
+#include "fitblock.h"
 
 int do_fit(struct FitBlock *iptr,int lag_lim,int goose,
 	   struct FitRange *ptr,struct FitRange *xptr,

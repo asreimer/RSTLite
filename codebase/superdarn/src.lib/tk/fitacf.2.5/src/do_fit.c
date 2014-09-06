@@ -42,6 +42,7 @@
 #include "elevation.h"
 #include "elev_goose.h"
 #include "ground_scatter.h"
+#include "fitblock.h"
 
 int do_fit(struct FitBlock *iptr,int lag_lim,int goose,
 	   struct FitRange *ptr,struct FitRange *xptr,

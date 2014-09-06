@@ -17,12 +17,13 @@
 #include "rawdata.h"
 #include "fitdata.h"
 #include "fitblk.h"
-#include "fitacfex2.h"
+
 #include "badsmp.h"
 #include "badlags.h"
 #include "badsmp.h"
 #include "lmfit.h"
 #include "rang_badlagsEx.h"
+#include "fitblock.h"
 
 /*
  $Log: fitacfex2.c,v $
