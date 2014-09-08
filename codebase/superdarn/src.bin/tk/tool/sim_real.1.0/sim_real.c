@@ -71,11 +71,12 @@ int main(int argc,char *argv[])
   int lagfr = 4;                            /*lag to first range*/
   int life_dist = 0;                        /*lifetime distribution*/
   int cpid = 150;                           /*control program ID number*/
-
+  int n = 20000;
   double dt;                                /*basic lag time*/
   int cri_flg = 1;                          /*cross-range interference flag*/
   int smp_flg = 0;                          /*output raw samples flag*/
   int decayflg = 0;
+  int scflg = 0;
 
   int rt = 0; 				    /* variable to catch return values of fscanf, 
                                                prevents compile warnings which resulted in 
@@ -89,6 +90,8 @@ int main(int argc,char *argv[])
   struct FitData *fitacf;
   int nave;
   int nrang;
+  char * filename1;
+  char * filename2;
 
   int n_samples;                            /*Number of datapoints in a single pulse sequence*/
   int n_pul,n_lags,*pulse_t,*tau;
@@ -131,6 +134,8 @@ char helpstr[] =
     /*command line growth time*/
     else if (strcmp(argv[i], "-t_g") == 0)
       t_g = 1e-6*atoi(argv[i+1]);
+    else if (strcmp(argv[i], "-n") == 0)
+      n = atoi(argv[i+1]);
     /*command line precipitation time constant*/
     else if (strcmp(argv[i], "-t_c") == 0)
       t_c = 1e-3*atoi(argv[i+1]);
@@ -145,6 +150,12 @@ char helpstr[] =
     /*command line output samples*/
     else if (strcmp(argv[i], "-samples") == 0)
       smp_flg = 1;
+    else if (strcmp(argv[i], "-scf") == 0)
+    {
+      scflg = 1;
+      filename1 = argv[i+1];
+      filename2 = argv[i+2];
+    }
     /*display help*/
     else if (strcmp(argv[i], "--help") == 0)
     {
@@ -159,15 +170,34 @@ char helpstr[] =
   /*fit file to recreate*/
   char * filename = argv[argc-1];
 
+  FILE * fitfp1=NULL;
+  FILE * fitfp2=NULL;
   /* Open the fit file */
   FILE * fitfp=fopen(filename,"r");
-  fprintf(stderr,"%s\n",filename);
   if(fitfp==NULL)
   {
     fprintf(stderr,"File %s not found.\n",filename);
     exit(-1);
   }
- 
+
+  fprintf(stderr,"Reading file: %s\n",filename);
+  if (scflg)
+  {
+    fitfp1=fopen(filename1,"w");
+    fitfp2=fopen(filename2,"w");
+    fprintf(stderr,"Saving to files: %s and %s\n",filename1,filename2);
+  
+    if(fitfp1==NULL)
+    {
+      fprintf(stderr,"Cannot open file %s.\n",filename1);
+      exit(-1);
+    }
+    if(fitfp2==NULL)
+    {
+      fprintf(stderr,"Cannot open file %s.\n",filename2);
+      exit(-1);
+    }
+  }
 
 
   /* ###################################
@@ -194,6 +224,13 @@ char helpstr[] =
   {
         RadarParmSetOriginCommand(prm,"sim_real");
         RadarParmSetCombf(prm,"sim_real");
+
+        if (scflg)
+        {
+          prm->scf=1;
+        } else {
+          prm->scf=0;
+        }
 
         /* set some variables for ease of programming/readability */
         nrang = prm->nrang;
@@ -240,6 +277,7 @@ char helpstr[] =
 	double * amp0_arr = malloc(nrang*sizeof(double));
 	int * qflg = malloc(nrang*sizeof(int));
 	complex double ** acfs = malloc(nrang*sizeof(complex double *));
+	complex double ** scfs = malloc(nrang*sizeof(complex double *));
         /*create a structure to store the raw samples from each pulse sequence*/
 	complex double * raw_samples = malloc(n_samples*nave*sizeof(complex double));
         for(i=0; i < n_samples*nave; i++)
@@ -283,8 +321,10 @@ char helpstr[] =
 		qflg[i] = fitacf->rng[i].qflg;
 		/*Creating the output array for ACFs*/
                 acfs[i] = malloc(n_lags*sizeof(complex double));
+                scfs[i] = malloc(n_lags*sizeof(complex double));
 		for(j=0;j<n_lags;j++) {
 			acfs[i][j] = 0.+I*0.;
+                        scfs[i][j] = 0.+I*0.;
                 }
 
                 /* fprintf(stderr,"%lf  %lf  %lf  %lf  %lf  %lf  %lf  %d  %lf  %lf\n", t_d_arr[i],
@@ -302,13 +342,14 @@ char helpstr[] =
 
 		/*call the simulation function*/
                 cpid = 150;
-                        fprintf(stderr,"SIMDATA");
+                fprintf(stderr,"SIMDATA");
 		sim_data(t_d_arr, t_g_arr, t_c_arr, v_dop_arr, qflg, velo_arr, amp0_arr, freq, noise_lev,
 							noise_flg, nave, nrang, lagfr, smsep, cpid, life_dist,
-							n_pul, cri_flg, n_lags, pulse_t, tau, dt, raw_samples, acfs, decayflg);
+							n_pul, cri_flg, n_lags, pulse_t, tau, dt, raw_samples, 
+                                                        acfs, scfs, scflg, n, decayflg);
 
 
-		if(!smp_flg)
+		if(!smp_flg || scflg)
 		{
 			/*fill the rawdata structure*/
 			struct RawData * raw;
@@ -321,6 +362,7 @@ char helpstr[] =
 			float * pwr0 = malloc(nrang*sizeof(float));
 			float * acfd = malloc(nrang*n_lags*2*sizeof(float));
 			float * xcfd = malloc(nrang*n_lags*2*sizeof(float));
+                        float * scfd = malloc(nrang*n_lags*2*sizeof(float));
 			for(i=0;i<nrang;i++)
 			{
 				slist[i] = i;
@@ -331,20 +373,31 @@ char helpstr[] =
 					acfd[i*n_lags*2+j*2+1] = cimag(acfs[i][j]);
 					xcfd[i*n_lags*2+j*2] = 0.;
 					xcfd[i*n_lags*2+j*2+1] = 0.;
+					scfd[i*n_lags*2+j*2] = creal(scfs[i][j]);
+					scfd[i*n_lags*2+j*2+1] = cimag(scfs[i][j]);
 				}
 			}
 
-			RawSetPwr(raw,nrang,pwr0,nrang,slist);
-			RawSetACF(raw,nrang,n_lags,acfd,nrang,slist);
-			RawSetXCF(raw,nrang,n_lags,xcfd,nrang,slist);
-			i=RawFwrite(stdout,prm,raw);
+			RawSetPwr(raw,nrang,pwr0,0,NULL);
+			RawSetACF(raw,nrang,n_lags,acfd,0,NULL);
+			RawSetXCF(raw,nrang,n_lags,xcfd,0,NULL);
+			RawSetSCF(raw,nrang,n_lags,scfd,0,NULL);
+
+                        if (scflg) {
+			    i=RawFwrite(fitfp1,prm,raw);
+                        } else {
+			    i=RawFwrite(stdout,prm,raw);
+                        }
+
+
 			free(slist);
 			free(pwr0);
 			free(acfd);
 			free(xcfd);
+                        free(scfd);
                         RawFree(raw);
 		}
-		else
+		if(smp_flg || scflg)
 		{
 			/*fill the iqdata structure*/
 			struct IQ *iq;
@@ -365,7 +418,6 @@ char helpstr[] =
                         struct timespec * time = malloc(nave*sizeof(struct timespec));
                         int * size = malloc(nave*sizeof(int));
 
-                        fprintf(stderr,"SETTING SAMPLES.");
 			for(i=0;i<nave;i++)
 			{
                                 offset[i] = i*n_samples*2*2;
@@ -378,8 +430,8 @@ char helpstr[] =
 				/*main array samples*/
 				for(j=0;j<n_samples;j++)
 				{
-					samples[i*n_samples*2*2+j*2] = (int16)(creal(raw_samples[i*n_samples+j]));
-					samples[i*n_samples*2*2+j*2+1] = (int16)(cimag(raw_samples[i*n_samples+j]));
+					samples[i*n_samples*2*2+j*2] = (int16)(cimag(raw_samples[i*n_samples+j]));
+					samples[i*n_samples*2*2+j*2+1] = (int16)(creal(raw_samples[i*n_samples+j]));
 				}
 				/*interferometer array samples*/
 				for(j=0;j<n_samples;j++)
@@ -396,9 +448,14 @@ char helpstr[] =
                         IQSetOffset(iq,nave,offset); /* offset into the sample buffer */
                         IQSetSize(iq,nave,size);
                         IQSetTime(iq,nave,time);
-                        fprintf(stderr,"WRITING IQ");
-			IQFwrite(stdout,prm,iq,badtr,samples);
-                        fprintf(stderr,"WRITTEN IQ\n");
+                        fprintf(stderr,"WRITING IQ\n");
+                        if (scflg)
+                        {
+			    IQFwrite(fitfp2,prm,iq,badtr,samples);
+                        } else {
+			    IQFwrite(stdout,prm,iq,badtr,samples);
+                        }
+
                         free(time);
                         free(size);
                         free(offset);
@@ -417,6 +474,9 @@ char helpstr[] =
         for(i=0;i<nrang;i++)
           free(acfs[i]);
         free(acfs);
+        for(i=0;i<nrang;i++)
+          free(scfs[i]);
+        free(scfs);
         free(qflg);
         free(t_d_arr);
         free(t_g_arr);
@@ -430,6 +490,12 @@ char helpstr[] =
 
   FitFree(fitacf);
   fclose(fitfp);
+
+  if (scflg)
+  {
+      fclose(fitfp1);
+      fclose(fitfp2);
+  }
 
 
   return 0;

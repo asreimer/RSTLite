@@ -494,7 +494,7 @@ int main(int argc,char *argv[])
   /*call the simulation function*/
   sim_data(t_d_arr, t_g_arr, t_c_arr, v_dop_arr, qflg, velo_arr, amp0_arr, freq, noise_lev,
             noise_flg, nave, nrang, lagfr, smsep, cpid, life_dist,
-            n_pul, cri_flg, n_lags, pulse_t, tau, dt, raw_samples, acfs, decayflg);
+            n_pul, cri_flg, n_lags, pulse_t, tau, dt, raw_samples, acfs,NULL,0,2000, decayflg);
 
   /*pill the parameter structure*/
   struct RadarParm * prm;
