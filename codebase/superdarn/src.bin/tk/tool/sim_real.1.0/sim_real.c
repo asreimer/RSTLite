@@ -69,7 +69,7 @@ int main(int argc,char *argv[])
   int noise_flg = 1;                        /*flag to indicate whether white noise is included*/
   double noise_lev = 0.;                    /*white noise level (ratio)*/
   int lagfr = 4;                            /*lag to first range*/
-  int life_dist = 0;                        /*lifetime distribution*/
+  int life_dist = 1;                        /*lifetime distribution*/
   int cpid = 150;                           /*control program ID number*/
   int n = 20000;
   double dt;                                /*basic lag time*/
@@ -313,7 +313,7 @@ char helpstr[] =
                        for fitex files and noise.skynoise for fitex and fitacf are equal so use
                        that for now */
                        
-		    amp0_arr[i] = sqrt(pow(10.0,fitacf->rng[i].p_0/10.0)*fitacf->noise.skynoise + fitacf->noise.skynoise);
+		    amp0_arr[i] = sqrt(pow(10.0,fitacf->rng[i].p_0/10.0)*fitacf->noise.skynoise);
                 } else {
                     amp0_arr[i] = 0;
                 }
