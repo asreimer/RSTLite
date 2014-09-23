@@ -366,15 +366,15 @@ char helpstr[] =
 			for(i=0;i<nrang;i++)
 			{
 				slist[i] = i;
-				pwr0[i] = creal(acfs[i][0]);
+				pwr0[i] = (float)(creal(acfs[i][0]));
 				for(j=0;j<n_lags;j++)
 				{
-					acfd[i*n_lags*2+j*2] = creal(acfs[i][j]);
-					acfd[i*n_lags*2+j*2+1] = cimag(acfs[i][j]);
-					xcfd[i*n_lags*2+j*2] = 0.;
-					xcfd[i*n_lags*2+j*2+1] = 0.;
-					scfd[i*n_lags*2+j*2] = creal(scfs[i][j]);
-					scfd[i*n_lags*2+j*2+1] = cimag(scfs[i][j]);
+					acfd[i*n_lags*2+j*2] = (float)(creal(acfs[i][j]));
+					acfd[i*n_lags*2+j*2+1] = (float)(cimag(acfs[i][j]));
+					xcfd[i*n_lags*2+j*2] = (float)(0.);
+					xcfd[i*n_lags*2+j*2+1] =(float)(0.);
+					scfd[i*n_lags*2+j*2] = (float)(creal(scfs[i][j]));
+					scfd[i*n_lags*2+j*2+1] = (float)(cimag(scfs[i][j]));
 				}
 			}
 

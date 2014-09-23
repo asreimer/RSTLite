@@ -35,6 +35,7 @@ THE SOFTWARE.
 #include <complex.h>
 #include <time.h>
 #include "sim_data.h"
+#include "rtypes.h"
 
 
 /*this is a C version of Pasha's IDL data generator*/
@@ -125,6 +126,108 @@ float gasdev(long *idum)
     iset = 0;
     return gset;
   }
+}
+
+
+int badrange_calc(int n_pul, int * pulse_t, int numrng, int numfrng, int mpinc, int smsep)
+{
+    int i;
+    int badrng=-1;
+    int sampleunit;
+    int mpincdiff;
+    int pulserisetime;
+    int halftxpl;
+
+/* search which pulse in the pulse-pattern that is used to compute lag 0 power  */
+ 
+/*    for(i=0; i < n_pul;i++)
+        if(lagtable[0][0] == pulse_t[i]) break; */
+/* Here we assume that the first pulse in the sequence will be used for lag0 power */
+
+    i=0;
+    if(i >= (n_pul - 1)) 
+    {
+        badrng = -1;  
+    }
+    else 
+    {   
+        sampleunit = mpinc / smsep;
+        mpincdiff = pulse_t[i+1] - 
+                    pulse_t[i];
+        numrng = mpincdiff * sampleunit;
+     
+        /* compute the pulse rise time effect */
+        halftxpl = smsep / 2;
+        pulserisetime = halftxpl /  smsep;
+        if ((halftxpl % smsep) != 0)
+            pulserisetime++;   /* add one because of the int div */
+        numrng = numrng - pulserisetime;  /* subtract pulse rise time */
+ 
+        /* now compute the start of the bad range */
+        badrng = numrng - numfrng;
+        if (badrng < 0) badrng = 0;
+     }      
+
+    return badrng;
+}
+
+void acf_calc(complex double * aa, complex double * rr, int n_pul, int n_lags, int * pulse_t, int * tau, int badrng, int range)
+{
+    int p1;
+    int p2;
+    int s1;
+    int l;
+    int n;
+    int16 real1, real2, imag1, imag2;
+
+    for(l=0;l<n_lags;l++)
+    {
+        n=0;
+        if (l==0)
+        {
+            if (range < badrng)
+            {
+                real1 = (int16)(creal(aa[0]));
+                imag1 = (int16)(cimag(aa[0]));
+                rr[l] = (real1 + I*imag1)*(real1 - I*imag1);
+               /* rr[l] = aa[0]*conj(aa[0]); */
+            }
+            else
+            {
+                real1 = (int16)(creal(aa[n_pul-1]));
+                imag1 = (int16)(cimag(aa[n_pul-1]));
+                rr[l] = (real1 + I*imag1)*(real1 - I*imag1);
+               /* rr[l] = aa[n_pul-1]*conj(aa[n_pul-1]); */
+            }
+        }
+        else
+        {
+            s1 = 0;
+            for(p2=1;p2<n_pul;p2++)
+            {
+                for(p1=s1;p1<p2;p1++)
+                {
+                    if ((pulse_t[p2] - pulse_t[p1]) == tau[l])
+                    {
+                        s1 = p1 + 1;
+                        n++;
+
+                        real1 = (int16)(creal(aa[p1]));
+                        imag1 = (int16)(cimag(aa[p1]));
+
+                        real2 = (int16)(creal(aa[p2]));
+                        imag2 = (int16)(cimag(aa[p2]));
+                        rr[l] = (real1 + I*imag1)*(real2 - I*imag2);
+                      /*  rr[l] = aa[p1]*conj(aa[p2]); */
+                    }
+                }
+            }
+            rr[l] = rr[l] / n;
+        }
+    }
+
+
+    return;
 }
 
 
@@ -292,6 +395,7 @@ void sim_data(double *t_d, double *t_g, double *t_c, double *v_dop, int * qflg,
   long i,j,kk,p,r,smpnum,temp;
   double rng = 0,taus,amplitude,phase;
   long seed = time(NULL)*time(NULL);        /*a seed for random number generation*/
+  int badrng;
 
   double lambda = c/freq;
 
@@ -342,6 +446,7 @@ void sim_data(double *t_d, double *t_g, double *t_c, double *v_dop, int * qflg,
   for(p=0;p<n_samples;p++)
   {
       tx[p] = 1.0;
+      noise_samples[p] = 0.+I*0.;
   }
   for (p=0;p<n_pul;p++)
   {
@@ -373,6 +478,11 @@ void sim_data(double *t_d, double *t_g, double *t_c, double *v_dop, int * qflg,
       range_gates[i][j].velo = velo[i]*gasdev(&temp);
     }
   }
+
+
+  /* Calculate the "bad range" (where lag0 goes bad) */
+  badrng = badrange_calc(n_pul, pulse_t, nrang, lagfr, (int)(dt*1.e6), (int)(smsep*1.e6));
+
 
   /***********************************
   ***Perform the actual simulation****
@@ -414,7 +524,8 @@ void sim_data(double *t_d, double *t_g, double *t_c, double *v_dop, int * qflg,
           smpnum = pulse_t[p]*taus+r+lagfr;
           aa[p] = noise_samples[smpnum];
         }
-        acf_27(aa,rr,cpid);
+        acf_calc(aa,rr,n_pul,n_lags,pulse_t,tau,badrng,r);
+        /*acf_27(aa,rr,cpid);*/
         /*add this ACF to the total ACF*/
         for(i=0;i<n_lags;i++)
           noise_acfs[r][i] += rr[i];
@@ -488,9 +599,10 @@ void sim_data(double *t_d, double *t_g, double *t_c, double *v_dop, int * qflg,
         for(p=0;p<n_pul;p++)
         {
           smpnum = pulse_t[p]*taus+r+lagfr;
-          aa[p] = raw_samples[smpnum];
+          aa[p] = raw_samples[smpnum]; /*+ noise_samples[smpnum];*/
         }
-        acf_27(aa,rr,cpid);
+        acf_calc(aa,rr,n_pul,n_lags,pulse_t,tau,badrng,r);
+/*        acf_27(aa,rr,cpid); */
         /*add this ACF to the total ACF*/
         for(i=0;i<n_lags;i++)
           acfs[r][i] += rr[i];
@@ -567,9 +679,10 @@ void sim_data(double *t_d, double *t_g, double *t_c, double *v_dop, int * qflg,
         for(p=0;p<n_pul;p++)
         {
           smpnum = pulse_t[p]*taus+r+lagfr;
-          aa[p] = raw_samples[smpnum];
+          aa[p] = raw_samples[smpnum]; /*+ noise_samples[smpnum];*/
         }
-        acf_27(aa,rr,cpid);
+        acf_calc(aa,rr,n_pul,n_lags,pulse_t,tau,badrng,r);
+/*        acf_27(aa,rr,cpid);*/
         /*add this ACF to the total ACF*/
         for(i=0;i<n_lags;i++)
           acfs[r][i] += rr[i];
@@ -581,7 +694,7 @@ void sim_data(double *t_d, double *t_g, double *t_c, double *v_dop, int * qflg,
       }
       /*save raw samples for output*/
       for(r=kk*n_samples;r<(kk+1)*n_samples-1;r++)
-        out_samples[r] += raw_samples[(r%n_samples)];
+        out_samples[r] = raw_samples[(r%n_samples)];
     }
 
     if (scflg) {
@@ -607,11 +720,11 @@ void sim_data(double *t_d, double *t_g, double *t_c, double *v_dop, int * qflg,
         if(decayflg) out_acfs[r][i] = 1./(pow(r+1,2))*acfs[r][i]/nave;
 	else out_acfs[r][i] = acfs[r][i]/nave; 
 
-        if(noise_flg)
-        {
+     /*   if(noise_flg)
+        { */
          /* noise_acfs[r][i] *= noise_lev/(nave*npwrtot/nnumtot); */
-          out_acfs[r][i] += noise_acfs[r][i]/nave;
-        }
+/*          out_acfs[r][i] += noise_acfs[r][i]/nave;
+        } */
       }
     }
 

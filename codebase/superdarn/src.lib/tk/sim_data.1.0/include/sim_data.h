@@ -16,6 +16,8 @@ struct irreg
   double velo;          /*random velocity component (Gaussian)*/
 };
 
+int badrange_calc(int n_pul, int * pulse_t, int numrng, int numfrng, int mpinc, int smsep);
+void acf_calc(complex double * aa, complex double * rr, int n_pul, int n_lags, int * pulse_t, int * tau, int badrng, int range);
 void acf_27(complex double * aa, complex double * rr, int cpid);
 void sim_data(double *t_d, double *t_g, double *t_c, double *v_dop, int * qflg,
               double *velo, double *amp0, double freq, double noise_lev,
