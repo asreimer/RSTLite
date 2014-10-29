@@ -77,7 +77,7 @@ int EstimateSelfClutter(struct TSGprm *prm,
 		 int mplgs,int *lagtable[2],
   	         float *scbuf,
 	         int xcf,int xcfoff,
-                 int badrange,float atten,float *dco) {
+                 int badrange,float atten,float *dco, int cleaned_acf) {
 
    int sdelay=0;
    int range;
@@ -229,8 +229,13 @@ int EstimateSelfClutter(struct TSGprm *prm,
              
              /* sum the real and imaginary acfs */
 
-             real = re_term3*re_term4 + im_term3*im_term4 - (re_term1*re_term2 + im_term1*im_term2);
-             imag = re_term3*im_term4 - im_term3*re_term4 - (re_term1*im_term2 - im_term1*re_term2);
+             if (cleaned_acf == 1) {
+                 real = (re_term1*re_term2 + im_term1*im_term2); 
+                 imag = (re_term1*im_term2 - im_term1*re_term2); 
+             } else {
+                 real = re_term3*re_term4 + im_term3*im_term4 - (re_term1*re_term2 + im_term1*im_term2); 
+                 imag = re_term3*im_term4 - im_term3*re_term4 - (re_term1*im_term2 - im_term1*re_term2); 
+             }
 
              if (atten !=0) {
                real=real/atten;

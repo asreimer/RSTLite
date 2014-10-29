@@ -185,6 +185,7 @@ int main (int argc,char *argv[]) {
   int digital;
   int rngoff;
   int xcfoff;
+  int cleaned_acf;
   /* End ASREIMER */
   int chnnum;
 
@@ -228,11 +229,16 @@ int main (int argc,char *argv[]) {
   OptionAdd(&opt,"skip",'i',&skpval);
   OptionAdd(&opt,"d",'x',&digital);  /* Added d option so we can process IQ data from digital receivers ASREIMER */
   OptionAdd(&opt,"chnnum",'i',&chnnum);  /* Added chnnum override flag in case wrong number of channels is in iqdat ASREIMER */
+  OptionAdd(&opt,"wocri",'x',&cleaned_acf);  /* Added wocri override flag to replaced acfd with cleaned (no cri) acfd in rawacf files ASREIMER */
 
   arg=OptionProcess(1,argc,argv,&opt,NULL);
 
   if (chnnum > 0 ) {
     fprintf(stderr,"Using override chnnum = %d \n",chnnum);
+  }
+
+  if (cleaned_acf > 0 ) {
+    fprintf(stderr,"Removing CRI from ACFD\n");
   }
 
   if (help==1) {
@@ -405,7 +411,7 @@ int main (int argc,char *argv[]) {
       /*ESTIMATE THE SELF CLUTTER*/
       EstimateSelfClutter(&tprm,ptr,rngoff,skpval !=0, 
 		          roff,ioff,mplgs,
-	  	          lag,scfd,ACF_PART,xcfoff,badrng,iq->atten[n]*atstp,NULL); 
+	  	          lag,scfd,ACF_PART,xcfoff,badrng,iq->atten[n]*atstp,NULL,cleaned_acf); 
 
       if (prm->xcf==1) ACFCalculate(&tprm,ptr,
 				     rngoff,skpval !=0, /* rngoff used to be 2*iq->chnum ASREIMER */
@@ -423,9 +429,16 @@ int main (int argc,char *argv[]) {
     ACFAverage(pwr0,acfd,xcfd,scfd,prm->nave,prm->nrang,prm->mplgs);
     
     RawSetPwr(raw,prm->nrang,pwr0,0,NULL);
-    RawSetACF(raw,prm->nrang,prm->mplgs,acfd,0,NULL);
-    RawSetXCF(raw,prm->nrang,prm->mplgs,xcfd,0,NULL);
-    RawSetSCF(raw,prm->nrang,prm->mplgs,scfd,0,NULL);
+
+    if (cleaned_acf == 1) {
+        RawSetACF(raw,prm->nrang,prm->mplgs,scfd,0,NULL);
+        RawSetXCF(raw,prm->nrang,prm->mplgs,xcfd,0,NULL);
+        RawSetSCF(raw,prm->nrang,prm->mplgs,acfd,0,NULL);
+    } else {
+        RawSetACF(raw,prm->nrang,prm->mplgs,acfd,0,NULL);
+        RawSetXCF(raw,prm->nrang,prm->mplgs,xcfd,0,NULL);
+        RawSetSCF(raw,prm->nrang,prm->mplgs,scfd,0,NULL);
+    }
  
     raw->thr=thrsh;
     RawFwrite(stdout,prm,raw);
