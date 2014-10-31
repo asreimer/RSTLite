@@ -37,7 +37,7 @@ int EstimateSelfClutter(struct TSGprm *prm,
 		 int mplgs,int *lagtable[2],
   	         float *scbuf,
 	         int xcf,int xcfoff,
-                 int badrange,float atten,float *dco);
+                 int badrange,float atten,float *dco, int cleaned_acf, int slow_way);
 
 
 

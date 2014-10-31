@@ -185,9 +185,12 @@ int main (int argc,char *argv[]) {
   int digital;
   int rngoff;
   int xcfoff;
-  int cleaned_acf;
+  int cleaned_acf=0;
   /* End ASREIMER */
   int chnnum;
+  int slow_way;
+  int nave_max = 10000;
+  int nave;
 
   prm=RadarParmMake();
   iq=IQMake();
@@ -230,6 +233,8 @@ int main (int argc,char *argv[]) {
   OptionAdd(&opt,"d",'x',&digital);  /* Added d option so we can process IQ data from digital receivers ASREIMER */
   OptionAdd(&opt,"chnnum",'i',&chnnum);  /* Added chnnum override flag in case wrong number of channels is in iqdat ASREIMER */
   OptionAdd(&opt,"wocri",'x',&cleaned_acf);  /* Added wocri override flag to replaced acfd with cleaned (no cri) acfd in rawacf files ASREIMER */
+  OptionAdd(&opt,"slow",'x',&slow_way);  /* calculate clutter the slow way */
+  OptionAdd(&opt,"navemax",'i',&nave_max);  /* calculate clutter the slow way */
 
   arg=OptionProcess(1,argc,argv,&opt,NULL);
 
@@ -393,7 +398,13 @@ int main (int argc,char *argv[]) {
 
     /* End ASREIMER */
 
-    for (n=0;n<iq->seqnum;n++) {
+    if (nave_max > iq->seqnum) {
+        nave = iq->seqnum;
+    } else {
+        nave = nave_max;
+    }
+
+    for (n=0;n<nave;n++) {
 
       ptr=samples+iq->offset[n];
 
@@ -411,7 +422,7 @@ int main (int argc,char *argv[]) {
       /*ESTIMATE THE SELF CLUTTER*/
       EstimateSelfClutter(&tprm,ptr,rngoff,skpval !=0, 
 		          roff,ioff,mplgs,
-	  	          lag,scfd,ACF_PART,xcfoff,badrng,iq->atten[n]*atstp,NULL,cleaned_acf); 
+	  	          lag,scfd,ACF_PART,xcfoff,badrng,iq->atten[n]*atstp,NULL,cleaned_acf,slow_way); 
 
       if (prm->xcf==1) ACFCalculate(&tprm,ptr,
 				     rngoff,skpval !=0, /* rngoff used to be 2*iq->chnum ASREIMER */
