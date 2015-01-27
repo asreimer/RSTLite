@@ -92,6 +92,7 @@ int EstimateSelfClutter(struct TSGprm *prm,
    float temp1;
    float temp2;
    int offset2;
+   float pi=3.141592653589793;
 
    int smpfr;
    int tp_in_tau;
@@ -156,7 +157,7 @@ int EstimateSelfClutter(struct TSGprm *prm,
                      temp = (S1 - prm->pat[pul]*tp_in_tau - smpfr);
                      /*Also we need to check and make sure we only save interfering range 
                        gates where we have valid lag0 power.*/
-                     if ((temp != range) && (temp >= 0) && (temp < nrang) && (temp < badrange)) {
+                     if ((temp != range) && (temp >= 0) && (temp < nrang)) { /* && (temp < badrange)) { */
                          r1[pul]= temp;
                      } else {
                          r1[pul]=-1000;
@@ -166,7 +167,7 @@ int EstimateSelfClutter(struct TSGprm *prm,
                  }
                  if (prm->pat[pul]*tp_in_tau <= S2){
                      temp = (S2 - prm->pat[pul]*tp_in_tau - smpfr);
-                     if ((temp != range) && (temp >= 0) && (temp < nrang) && (temp < badrange)) {
+                     if ((temp != range) && (temp >= 0) && (temp < nrang)) { /* && (temp < badrange)) { */
                          r2[pul]= temp;
                      } else {
                          r2[pul]=-1000;
@@ -304,7 +305,7 @@ int EstimateSelfClutter(struct TSGprm *prm,
 
              /* sum the real and imaginary acfs */
 
-             real = term1 + term2 + term3;
+             real = 4.0/pi*(term1 + term2 + term3);
              imag = 0;
 
 

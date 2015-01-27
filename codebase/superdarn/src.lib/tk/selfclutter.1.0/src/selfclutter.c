@@ -155,7 +155,7 @@ int EstimateSelfClutter(struct TSGprm *prm,
                      temp = (S1 - prm->pat[pul]*tp_in_tau - smpfr);
                      /*Also we need to check and make sure we only save interfering range 
                        gates where we have valid lag0 power.*/
-                     if ((temp != range) && (temp >= 0) && (temp < nrang) && (temp < badrange)) {
+                     if ((temp != range) && (temp >= 0) && (temp < nrang) && (temp < badrange)) { 
                          r1[pul]= temp;
                      } else {
                          r1[pul]=-1000;
@@ -165,7 +165,7 @@ int EstimateSelfClutter(struct TSGprm *prm,
                  }
                  if (prm->pat[pul]*tp_in_tau <= S2){
                      temp = (S2 - prm->pat[pul]*tp_in_tau - smpfr);
-                     if ((temp != range) && (temp >= 0) && (temp < nrang) && (temp < badrange)) {
+                     if ((temp != range) && (temp >= 0) && (temp < nrang) && (temp < badrange)) { 
                          r2[pul]= temp;
                      } else {
                          r2[pul]=-1000;
