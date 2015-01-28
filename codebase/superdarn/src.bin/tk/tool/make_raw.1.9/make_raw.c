@@ -173,11 +173,11 @@ int main (int argc,char *argv[]) {
 
   /* ASREIMER 23 July 2014
      Need to initialize new variables */
-  int digital;
+  int digital=0;
   int rngoff;
   int xcfoff;
   /* End ASREIMER */
-  int chnnum;
+  int chnnum=0;
 
   prm=RadarParmMake();
   iq=IQMake();
