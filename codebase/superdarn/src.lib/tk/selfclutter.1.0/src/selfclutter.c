@@ -589,7 +589,7 @@ int Cmpse(struct FitPrm *prm, int *lagtable[2], int gate,
       badrange      - at which range gates, lag0 power measurement is "bad" (ie. more than one pulse has been TXed)
       *pwr0         - pointer to array of lag0 power (in mag units, NOT DB) at each range
 
-      Example usage in FITACF (in the do_fit.c code):
+      Example usage in FITACF (in the do_fit.c code after ptr[i].p_0 is set to SNR in units of DB around line 140):
       ***********************************************
       int status;
       int r;
@@ -599,7 +599,7 @@ int Cmpse(struct FitPrm *prm, int *lagtable[2], int gate,
 
       for (r=0;r<iptr->prm.nrang;r++) {
           status = Cmpse(&iptr->prm, &iptr->prm.lag, r, &self_clutter, badrng, &pwrd);
-          SOME_FUNCTION THAT USES SELF-CLUTTER (ie. to make error bars)
+          SOME_FUNCTION_THAT_USES_SELF-CLUTTER (ie. to make error bars)
       }
       free(self_clutter);
    */
@@ -635,8 +635,8 @@ int Cmpse(struct FitPrm *prm, int *lagtable[2], int gate,
        for (pul=0; pul < mppul; pul++) {
            /*Find the pulses that were transmitted before the samples were recorded
              and then save which range gates each pulse is coming from. */
-           if (prm->pat[pul]*tp_in_tau <= S1){
-               temp = (S1 - prm->pat[pul]*tp_in_tau - smpfr);
+           if (prm->pulse[pul]*tp_in_tau <= S1){
+               temp = (S1 - prm->pulse[pul]*tp_in_tau - smpfr);
                /*Also we need to check and make sure we only save interfering range 
                  gates where we have valid lag0 power.*/
                if ((temp != range) && (temp >= 0) && (temp < nrang) && (temp < badrange)) {
@@ -647,8 +647,8 @@ int Cmpse(struct FitPrm *prm, int *lagtable[2], int gate,
            } else {
                r1[pul]=-1000;
            }
-           if (prm->pat[pul]*tp_in_tau <= S2){
-               temp = (S2 - prm->pat[pul]*tp_in_tau - smpfr);
+           if (prm->pulse[pul]*tp_in_tau <= S2){
+               temp = (S2 - prm->pulse[pul]*tp_in_tau - smpfr);
                if ((temp != range) && (temp >= 0) && (temp < nrang) && (temp < badrange)) {
                    r2[pul]= temp;
                } else {
