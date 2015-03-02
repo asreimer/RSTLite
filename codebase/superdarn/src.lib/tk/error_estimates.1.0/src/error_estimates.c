@@ -52,6 +52,7 @@ int lag0_error(int nrang, float *pwr0, float noise_power, float K, float Kn, flo
         error[i] = sqrt( (1.0/K) * pow(pwr0[i],2) + (1.0/Kn) * pow(noise_power,2) );
     }
     return 0;
+}
 
 /* calculates the error in the normalized acf estimator as given by Farley 1969 equation (16) for rho_1 */
 int norm_acf_error1(int nrang, float *pwr0, float noise_power, float *selfclutter, float *acf, float K, float Kn, float *error) {
