@@ -31,9 +31,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 #include "rtypes.h"
 #include "tsg.h"
 #include "acf.h"
+#include "fitblk.h"
 
 
 /***********************************************************************************************/
@@ -625,7 +627,7 @@ int Cmpse(struct FitPrm *prm, int *lagtable[2], int gate,
 
    for(lag=0;lag < mplgs; lag++) {
        /* First, initialize self_clutter power to 0 */
-       self_clutter[lag] = 0
+       self_clutter[lag] = 0;
 
        /* Determine which ranges are intefering in the current lag */
        /* samples are we using for the current lag*/
@@ -639,7 +641,7 @@ int Cmpse(struct FitPrm *prm, int *lagtable[2], int gate,
                temp = (S1 - prm->pulse[pul]*tp_in_tau - smpfr);
                /*Also we need to check and make sure we only save interfering range 
                  gates where we have valid lag0 power.*/
-               if ((temp != range) && (temp >= 0) && (temp < nrang) && (temp < badrange)) {
+               if ((temp != gate) && (temp >= 0) && (temp < nrang) && (temp < badrange)) {
                    r1[pul]= temp;
                } else {
                    r1[pul]=-1000;
@@ -649,7 +651,7 @@ int Cmpse(struct FitPrm *prm, int *lagtable[2], int gate,
            }
            if (prm->pulse[pul]*tp_in_tau <= S2){
                temp = (S2 - prm->pulse[pul]*tp_in_tau - smpfr);
-               if ((temp != range) && (temp >= 0) && (temp < nrang) && (temp < badrange)) {
+               if ((temp != gate) && (temp >= 0) && (temp < nrang) && (temp < badrange)) {
                    r2[pul]= temp;
                } else {
                    r2[pul]=-1000;
@@ -687,7 +689,7 @@ int Cmpse(struct FitPrm *prm, int *lagtable[2], int gate,
            }
        }
        
-       self_clutter[lag] = term1 + term2 + term3    
+       self_clutter[lag] = term1 + term2 + term3;
 
 
    } 
