@@ -88,11 +88,11 @@ int norm_acf_error2(int nrang, float *pwr0, float noise_power, float *selfclutte
   where * denotes the complex conjugate and indicies 1 and 2 denote voltage 
   samples at times 1 and 2 respectively.
 */
-int acf_error(int nrang, float *pwr0, float noise_power, float *selfclutter, float K, float *error) {
+int acf_error(int mplgs, float pwr0, float noise_power, float *selfclutter, float K, float *error) {
 
     int i;
-    for (i=0;i<nrang;i++){
-        error[i] = sqrt(1.0/K) * (pwr0[i] + noise_power + selfclutter[i]);
+    for (i=0;i<mplgs;i++){
+        error[i] = sqrt(1.0/K) * (pwr0 + noise_power + selfclutter[i]);
     }
 
     return 0;
