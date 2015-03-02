@@ -628,21 +628,18 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
   mp_par    parssingle[3];
   mp_result result;
   mp_config config;
-  double pdouble[6];
   double psingle[3];
   double w_limit,t_limit,t_if,w_if,lag0pwrf,v_if,f_if,lambda,tau,ref,imf;
   int status;
   double perrorsingle[3];
   float *sigma = malloc(prm->mplgs*sizeof(double));
   struct exdatapoints * exdata = malloc(prm->mplgs*sizeof(struct exdatapoints));
-
   int *badlag = malloc(prm->mplgs * sizeof(int));
   struct FitACFBadSample badsmp;
 
-
-	/*check for tauscan*/
-	if(prm->cp == -3310 || prm->cp == 3310 || prm->cp == 503 || prm->cp == -503)
-		tauflg = 1;
+  /*check for tauscan*/
+  if(prm->cp == -3310 || prm->cp == 3310 || prm->cp == 503 || prm->cp == -503)
+    tauflg = 1;
 
   /* Find the highest lag, and allocate memory */
   if(!((tauflg) && prm->mplgs == 18))
@@ -653,9 +650,9 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
       if (abs(prm->lag[0][j]-prm->lag[1][j])>lastlag)
         lastlag = abs(prm->lag[0][j]-prm->lag[1][j]);
     }
-  }
-  else
+  } else {
     lastlag=prm->mplgs-1;
+  }
 
   /*define some stuctures using # of lags*/
   lagpwr       = malloc(sizeof(float)*(lastlag+1));
@@ -663,28 +660,35 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
   lag_avail    = malloc(sizeof(int)*(lastlag+1));
   good_lags    = malloc(sizeof(float)*(lastlag+1));
 
-
   /*setup fitblock parameter*/
   setup_fblk(prm, raw, fblk);
 
   FitSetRng(fit,fblk->prm.nrang);
   if(fblk->prm.xcf)
   {
-   FitSetXrng(fit,fblk->prm.nrang);
-   FitSetElv(fit,fblk->prm.nrang);
+    FitSetXrng(fit,fblk->prm.nrang);
+    FitSetElv(fit,fblk->prm.nrang);
   }
 
   /*calculate noise levels*/
   lm_noise_stat(prm,raw,&skynoise);
   if(!tauflg)
   {
-		/*check for stereo operation*/
-    if(fblk->prm.channel==0) FitACFBadlags(&fblk->prm,&badsmp);
-    else FitACFBadlagsStereo(&fblk->prm,&badsmp);
+    /*check for stereo operation*/
+    if(fblk->prm.channel==0) 
+    {
+      FitACFBadlags(&fblk->prm,&badsmp);
+    } else {
+      FitACFBadlagsStereo(&fblk->prm,&badsmp);
+    }
   }
 
-  if(prm->cp == 153) mplgs = prm->mplgs - 1;
-  else mplgs = prm->mplgs;
+  if(prm->cp == 153) 
+  {
+    mplgs = prm->mplgs - 1;
+  } else {
+    mplgs = prm->mplgs;
+  }
 
   prm->noise.mean = skynoise;
 
@@ -737,7 +741,6 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
     /*Preliminaries, badlag checking, power level checking*/
     for(L=0;L<mplgs;L++)
     {
-
       if(tauflg && prm->mplgs == 18) /*tauscan , new ROS*/
       { 
         lag = L;
@@ -781,7 +784,6 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
       pwr_flg = (lag0pwr>=minpwr);
     } else {   /* for everything else */
       pwr_flg = raw->acfd[0][R*prm->mplgs] >= skynoise;
-      /* minlag = 4; redundant since this is set near lmfit2 function definition */
     }
 
     if(print)
@@ -851,17 +853,7 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
       }
 
       /*get velocity guess from model comparisons*/
-      double model_guess = getguessex(prm,raw,fit,fblk,R,skynoise);
-      w_limit = model_guess;
-      int mflg = 1;
-
-      /* specify limits on omega (doppler shift) */
-      if(w_limit == -88888888.) /* -88888888. error code from getguessex */
-      {
-        w_limit=0;
-        mflg=0;
-      }
-      pdouble[1] = w_limit*4.*PI/lambda; /* initial velocity guess in angular Doppler frequency */
+      w_limit = getguessex(prm,raw,fit,fblk,R,skynoise);
 
       /* Determine lambda power and decay time initial guesses from lsfit*/
       nrfit(good_lags,logpwr,goodcnt,sigma,1,&a,&b,&siga,&sigb,&chi2,&q);
@@ -887,14 +879,18 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
       /*initial decay time guess*/
       t_limit = lambda/(2.*PI*fitted_width);
       psingle[0] = t_limit;
-      w_limit = model_guess;
-      if(w_limit == -88888888.) w_limit=0;
+
+      /* specify limits on omega (doppler shift) */
+      if(w_limit == -88888888.) /* -88888888. error code from getguessex */
+      {
+        w_limit=0;
+      }
+
       /*initial velocity guess in angular Doppler frequency*/
       psingle[1] = w_limit*4.*PI/lambda;
 
       /*lag0power initial guess*/
       psingle[2] = raw->acfd[0][R*prm->mplgs];
-
 
       /*limit values to prevent fit from going to +- inf and breaking*/
       t_limit = 999999.;
@@ -933,11 +929,13 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
       {
         lag = good_lags[i];
         if(tauflg && prm->mplgs == 18)
-        	L = lag;
-        else
+        {
+          L = lag;
+        } else {
           for(j=0;j<mplgs;j++)
             if(abs(prm->lag[0][j]-prm->lag[1][j])==lag)
               L = j;
+        }
 
         tau = lag*prm->mpinc*1.e-6;
         ref = lag0pwrf*exp(-1.0*tau/t_if)*cos(tau*f_if);
@@ -947,13 +945,13 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
       acferr = sqrt(acferr);
 
       fitted_power = 10.0*log10((lag0pwrf)/skynoise);
-      fit->rng[R].p_0   = lag0pwrf;
+      fit->rng[R].p_0 = lag0pwrf;
 
       /*the Hays radars are especially noisy*/
       if(prm->stid == 204 || prm->stid == 205)
         minpwr = 5.;
 
-      sct_flg = (result.status > 0 && fitted_power > minpwr && lag0pwrf > 1.5*acferr && mflg/* && result.npegged == 0*/);
+      sct_flg = (result.status > 0 && fitted_power > minpwr && lag0pwrf > 1.5*acferr && /* mflg && result.npegged == 0*/);
       fprintf(stdout,"%d  %d  %d  %d  %d  %d\n",R,sct_flg,result.status > 0, fitted_power > minpwr, lag0pwrf > 1.5*acferr, mflg);
       if(print)
         fprintf(stdout,"%d  %d  %d  %lf  %lf  %lf  %lf  %d\n",
