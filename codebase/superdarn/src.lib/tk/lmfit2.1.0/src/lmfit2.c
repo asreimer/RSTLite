@@ -19,12 +19,11 @@
 #include "fitblk.h"
 #include "lmfit2.h"
 #include "badsmp.h"
-#include "badlag.h"
 #include "badlags.h"
 #include "mpfit.h"
 #include "selfclutter.h"
 #include "error_estimates.h"
-
+#include "acf.h"
 
 /* dbl_cmp
    =========
@@ -671,8 +670,8 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
   struct FitACFBadSample badsmp;
 
   /* definitions for calculating Cmpse self-clutter */
-  int status;
-  float *self_clutter = malloc(sizeof(float)*prm->mplgs);
+  int badrng;
+  float *selfclutter = malloc(sizeof(float)*prm->mplgs);
   float *pwrd = malloc(sizeof(float)*prm->nrang);
   /* definitions for error estimates */
   float *error = malloc(sizeof(float)*prm->mplgs);
@@ -742,14 +741,14 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
   }
 
   /* determine the "bad range" range where lag0 pwr estimates become bad */
-  badrng = ACFBadLagZero(&prm,prm->mplgs,&prm->lag);
+  badrng = ACFBadLagZero(prm,prm->mplgs,prm->lag);
 
   /* need an array of lag0 power without noise for selfclutter calculation */
   for (R=0;R<prm->nrang;R++)
   {
     pwrd[R] = raw->acfd[0][R*prm->mplgs] - skynoise;
   }
-  status = lag0_error(prm->nrang, &pwrd, skynoise, prm->nave, prm->nave, &lag0error);
+  status = lag0_error(prm->nrang, pwrd, skynoise, prm->nave, prm->nave, lag0error);
 
   /* Loop every range gate and calculate parameters */
   for (R=0;R<prm->nrang;R++)
@@ -780,7 +779,7 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
     availcnt = 0;
 
     /* calculate the self_clutter in each lag */
-    status = Cmpse(&prm, &prm->lag, R, &self_clutter, badrng, &pwrd);
+    status = Cmpse(&fblk->prm, prm->lag, R, selfclutter, badrng, pwrd);
 
     /*calculate SNR of lag0power*/
     lag0pwr  = 10.0*log10((raw->acfd[0][R*prm->mplgs])/skynoise);
@@ -898,7 +897,7 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
         pwr += lagpwr[lag];
       }
 
-      acf_error(prm->mplgs, pwrd[R], skynoise, &selfclutter, prm->nave, &error)
+      acf_error(prm->mplgs, pwrd[R], skynoise, selfclutter, prm->nave, error);
 
       /* calculate error estimate from lag0power, noise, and selfclutter */
       for(i=0;i<goodcnt;i++)
@@ -990,7 +989,7 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
 
       /*run a single-component fit*/
       /* status = mpfit(singlefit,availcnt*2,3,psingle,parssingle,&config,(void *)data,&result); */
-      status = exp_acf_3parm(singlefit,availcnt*2,3,psingle,parssingle,&config,(void *)data,&result);
+      status = mpfit(exp_acf_3parm,availcnt*2,3,psingle,parssingle,&config,(void *)data,&result);
       /*final params from single-component fit*/
       t_if = psingle[0];
       f_if = psingle[1];
@@ -1028,8 +1027,8 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
       if(prm->stid == 204 || prm->stid == 205)
         minpwr = 5.;
 
-      sct_flg = (result.status > 0 && fitted_power > minpwr && lag0pwrf > 1.5*acferr && /* mflg && result.npegged == 0*/);
-      fprintf(stdout,"%d  %d  %d  %d  %d  %d\n",R,sct_flg,result.status > 0, fitted_power > minpwr, lag0pwrf > 1.5*acferr, mflg);
+      sct_flg = (result.status > 0 && fitted_power > minpwr && lag0pwrf > 1.5*acferr /* &&  mflg && result.npegged == 0*/);
+      fprintf(stdout,"%d  %d  %d  %d  %d \n",R,sct_flg,result.status > 0, fitted_power > minpwr, lag0pwrf > 1.5*acferr /*, mflg */);
       if(print)
         fprintf(stdout,"%d  %d  %d  %lf  %lf  %lf  %lf  %d\n",
                 sct_flg,result.status,result.npegged,t_if,f_if,lag0pwrf,acferr,result.niter);
@@ -1064,7 +1063,7 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
   free(sigma);
   free(exdata);
   free(badlag);
-  free(self_clutter);
+  free(selfclutter);
   free(pwrd);
   free(error);
   free(lag0error);
