@@ -59,7 +59,7 @@ int norm_acf_error1(int nrang, float *pwr0, float noise_power, float *selfclutte
     int i;
     float rho_p;
     for (i=0;i<nrang;i++){
-        rho_p = (acf[i]*pwr0[i])/(pwr0[i] + noise_power + selfclutter[i])
+        rho_p = (acf[i]*pwr0[i])/(pwr0[i] + noise_power + selfclutter[i]);
         error[i] = sqrt( (1.0/K) * pow(((pwr0[i] + noise_power + selfclutter[i])/pwr0[i]),2)*(1.0 + pow(acf[i],2) + pow(rho_p,2) + pow(acf[i]*rho_p,2) - 4.0*acf[i]*rho_p ) + (1.0/Kn)*pow(noise_power/pwr0[i],2)*(1.0 + pow(acf[i],2)) );
     }
 
