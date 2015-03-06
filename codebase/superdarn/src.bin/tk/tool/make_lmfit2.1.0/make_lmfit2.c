@@ -103,29 +103,26 @@ int main(int argc,char *argv[])
   old=!new;
 
   if (help==1)
-	{
+  {
     OptionPrintInfo(stdout,hlpstr);
     exit(0);
   }
 
   if (option==1)
-	{
+  {
     OptionDump(stdout,&opt);
     exit(0);
   }
 
-
-
-
   if ((old) && (argc-arg<2))
-	{
+  {
     OptionPrintInfo(stdout,hlpstr);
     exit(-1);
   }
 
   envstr=getenv("SD_RADAR");
   if (envstr==NULL)
-	{
+  {
     fprintf(stderr,"Environment variable 'SD_RADAR' must be defined.\n");
     exit(-1);
   }
@@ -133,7 +130,7 @@ int main(int argc,char *argv[])
   fp=fopen(envstr,"r");
 
   if (fp==NULL)
-	{
+  {
     fprintf(stderr,"Could not locate radar information file.\n");
     exit(-1);
   }
@@ -141,14 +138,14 @@ int main(int argc,char *argv[])
   network=RadarLoad(fp);
   fclose(fp); 
   if (network==NULL)
-	{
+  {
     fprintf(stderr,"Failed to read radar information.\n");
     exit(-1);
   }
 
   envstr=getenv("SD_HDWPATH");
   if (envstr==NULL)
-	{
+  {
     fprintf(stderr,"Environment variable 'SD_HDWPATH' must be defined.\n");
     exit(-1);
   }
@@ -157,22 +154,20 @@ int main(int argc,char *argv[])
 
 
   if (old)
-	{
-		rawfp=OldRawOpen(argv[arg],NULL);
+  {
+    rawfp=OldRawOpen(argv[arg],NULL);
     if (rawfp==NULL)
-		{
-			fprintf(stderr,"File not found.\n");
-			exit(-1);
-     }
-     status=OldRawRead(rawfp,prm,raw);  
-  }
-  else
-	{
-		if (arg==argc) fp=stdin;
+    {
+      fprintf(stderr,"File not found.\n");
+      exit(-1);
+    }
+    status=OldRawRead(rawfp,prm,raw);  
+  } else {
+    if (arg==argc) fp=stdin;
     else fp=fopen(argv[arg],"r");
 
     if (fp==NULL)
-		{
+    {
       fprintf(stderr,"File not found.\n");
       exit(-1);
     }
@@ -181,7 +176,7 @@ int main(int argc,char *argv[])
 
   radar=RadarGetRadar(network,prm->stid);
   if (radar==NULL)
-	{
+  {
     fprintf(stderr,"Failed to get radar information.\n");
     exit(-1);
   }
@@ -191,7 +186,7 @@ int main(int argc,char *argv[])
                           prm->time.sc);
 
   if (site==NULL)
-	{
+  {
     fprintf(stderr,"Failed to get site information.\n");
     exit(-1);
   }
@@ -200,22 +195,20 @@ int main(int argc,char *argv[])
   command[0]=0;
   n=0;
   for (c=0;c<argc;c++)
-	{
+  {
     n+=strlen(argv[c])+1;
     if (n>127) break;
     if (c !=0) strcat(command," ");
     strcat(command,argv[c]);
   }
 
-
-
   if (vb)  
       fprintf(stderr,"%d-%d-%d %d:%d:%d beam=%d\n",prm->time.yr,prm->time.mo,
-	     prm->time.dy,prm->time.hr,prm->time.mt,prm->time.sc,prm->bmnum);
+	      prm->time.dy,prm->time.hr,prm->time.mt,prm->time.sc,prm->bmnum);
 
   fblk=FitACFMake(site,prm->time.yr);
 
-	lmfit2(prm,raw,fit,fblk,0);
+  lmfit2(prm,raw,fit,fblk,vb);
 
   if (old)
   {
@@ -229,7 +222,7 @@ int main(int argc,char *argv[])
     sprintf(vstr,"%d.%d",fit->revision.major,fit->revision.minor);
     OldFitHeaderFwrite(fitfp,"make_fit","fitacf",vstr);
   }
- int i;
+  int i;
 
   do
   {
@@ -258,13 +251,12 @@ int main(int argc,char *argv[])
     else
       status=RawFread(fp,prm,raw);
 
-     if (vb)
+    if (vb)
       fprintf(stderr,"%d-%d-%d %d:%d:%d beam=%d\n",prm->time.yr,prm->time.mo,
-	     prm->time.dy,prm->time.hr,prm->time.mt,prm->time.sc,prm->bmnum);
-
+	      prm->time.dy,prm->time.hr,prm->time.mt,prm->time.sc,prm->bmnum);
 
     if (status==0)
-			lmfit2(prm,raw,fit,fblk,0);
+      lmfit2(prm,raw,fit,fblk,vb);
 
   } while (status==0);
 
