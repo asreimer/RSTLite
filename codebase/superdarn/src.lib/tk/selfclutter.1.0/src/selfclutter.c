@@ -580,7 +580,7 @@ int Cmvse(struct TSGprm *prm,
 /***********************************************************************************************/
 
 /* Maximal lag0 Power Based Self-Clutter Estimator */
-int Cmpse(struct FitPrm *prm, int *lagtable[2], int gate,
+int Cmpse(struct FitPrm *prm, int16 *lagtable[2], int gate,
   	  float *self_clutter, int badrange, float *pwr0) {
    /* 
 
@@ -624,8 +624,11 @@ int Cmpse(struct FitPrm *prm, int *lagtable[2], int gate,
    int r1[prm->mppul],r2[prm->mppul];           /*initialize integer arrays*/
    int temp;
 
+   if (badrange < 0)
+     badrange = nrang;
 
    for(lag=0;lag < mplgs; lag++) {
+       fprintf(stderr,"Gate, lag:%d %d %d %d %d \n", gate, lag, lagtable[0][lag], lagtable[1][lag], smpfr);
        /* First, initialize self_clutter power to 0 */
        self_clutter[lag] = 0;
 
@@ -684,11 +687,12 @@ int Cmpse(struct FitPrm *prm, int *lagtable[2], int gate,
        for (pul1=0; pul1 < mppul; pul1++) {
            for (pul2=0; pul2 < mppul; pul2++) {
                if ((r1[pul1] != -1000) && (r2[pul2] != -1000)) {
-                   term3 += sqrt(pwr0[r1[pul]]*pwr0[r2[pul]]);
+                   term3 += sqrt(pwr0[r1[pul1]]*pwr0[r2[pul2]]);
                }
            }
        }
-       
+
+
        self_clutter[lag] = term1 + term2 + term3;
 
 
