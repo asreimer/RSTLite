@@ -47,7 +47,7 @@ int Cmvse(struct TSGprm *prm,
 	         int xcf,int xcfoff,
                  int badrange,float atten,float *dco, int cleaned_acf);
 
-int Cmpse(struct FitPrm *prm, int *lagtable[2], int gate,
+int Cmpse(struct FitPrm *prm, int16 *lagtable[2], int gate,
   	  float *self_clutter, int badrange, float *pwr0);
 
 
