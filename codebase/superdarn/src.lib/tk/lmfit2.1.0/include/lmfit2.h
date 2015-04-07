@@ -38,4 +38,8 @@ double calc_err(double w_guess, struct RawData *raw, float *good_lags, int goodc
               int R, float *lagpwr,double pwr, struct RadarParm *prm);
 int lm_dbl_cmp(const void *x,const void *y);
 
+int exp_acf_power(int m, int n, double *p, double *deviates, double **derivs, void *private);
+int exp_acf_3parm(int m, int n, double *p, double *deviates, double **derivs, void *private);
+
+
 #endif

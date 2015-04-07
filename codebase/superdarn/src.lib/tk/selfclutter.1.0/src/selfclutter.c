@@ -628,7 +628,7 @@ int Cmpse(struct FitPrm *prm, int16 *lagtable[2], int gate,
      badrange = nrang;
 
    for(lag=0;lag < mplgs; lag++) {
-       fprintf(stderr,"Gate, lag:%d %d %d %d %d \n", gate, lag, lagtable[0][lag], lagtable[1][lag], smpfr);
+
        /* First, initialize self_clutter power to 0 */
        self_clutter[lag] = 0;
 
@@ -692,9 +692,7 @@ int Cmpse(struct FitPrm *prm, int16 *lagtable[2], int gate,
            }
        }
 
-
        self_clutter[lag] = term1 + term2 + term3;
-
 
    } 
 
