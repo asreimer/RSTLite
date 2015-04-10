@@ -288,8 +288,7 @@ struct one_param_fit get_v_brute(struct RadarParm *prm, float *good_lags, int go
 {
   
   int i,j,k,lag,L;
-  float time;
-  float F1,F2,D1,D2,exp_factor;
+  float F1,F2;
   int min_ind;
   const float delta_chi = 9.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
   const int num_f = 1000;
@@ -305,47 +304,61 @@ struct one_param_fit get_v_brute(struct RadarParm *prm, float *good_lags, int go
   /* frequency and chi-squared arrays */
   float *fs = malloc(num_f*sizeof(float));
   float *chi = malloc(num_f*sizeof(float));
+  float *times = malloc(goodcnt*sizeof(float));
+  float *D1 = malloc(goodcnt*sizeof(float));
+  float *D2 = malloc(goodcnt*sizeof(float));
+  float *exp_factors = malloc(goodcnt*sizeof(float));
+  float *errors = malloc(goodcnt*sizeof(float));
+
+  for(j=0;j<goodcnt;j++)
+  {
+    lag = (int)(good_lags[j]);
+    /*tauscan AND new ROS*/
+    if((tauflg) && prm->mplgs == 18)
+    {
+      L = lag;
+    } else {  /*non-tauscan OR old ROS*/
+      for(k=0;k<prm->mplgs;k++)
+      {
+        if(abs(prm->lag[0][k]-prm->lag[1][k])==lag)
+        {
+          L = k;
+        }
+      }
+    }
+    times[j] = tau*lag;
+    exp_factors[j] = repwr[0]*exp(-times[j]*2.*pi*width/lamda);
+    D1[j] = repwr[lag];
+    D2[j] = impwr[lag];
+    errors[j] = error[L];
+  }
 
   fs[0] = -nyquist_f;
   chi[0] = 0.0;
   min_ind = 0;
   vfit.min_chi = chi[0];
   vfit.param = fs[0];
+
+  /* initialize chi array and generate an array of spectral widths */
+  for (i=1;i<num_f;i++)
+  {
+    
+    fs[i] = fs[i-1] + f_step;
+    chi[i] = 0.0;
+  }
+
+  /* calculate chi2 at each velocity */
   for (i=0;i<num_f;i++)
   {
-      /* initialize chi array and generate an array of spectral widths */
-      if (i != 0)
-      {
-        fs[i] = fs[i-1] + f_step;
-        chi[i] = 0.0;
-      }
-
-      /* calculate chi2 at each velocity */
       for(j=0;j<goodcnt;j++)
       {
-        lag = (int)(good_lags[j]);
-        /*tauscan AND new ROS*/
-        if((tauflg) && prm->mplgs == 18)
-        {
-          L = lag;
-        } else {  /*non-tauscan OR old ROS*/
-          for(k=0;k<prm->mplgs;k++)
-          {
-            if(abs(prm->lag[0][k]-prm->lag[1][k])==lag)
-            {
-              L = k;
-            }
-          }
-        }
-        time = tau*lag;
-        exp_factor = repwr[0]*exp(-time*2.*pi*width/lamda);
-        D1 = repwr[lag];
-        D2 = impwr[lag];
-        F1 = exp_factor*cos(2.*pi*fs[i]*time);
-        F2 = exp_factor*sin(2.*pi*fs[i]*time);
-
-        chi[i] += ((D1-F1)*(D1-F1) + (D2-F2)*(D2-F2))/(error[L]*error[L]);
+        F1 = exp_factors[j]*cos(2.*pi*fs[i]*times[j]);
+        F2 = exp_factors[j]*sin(2.*pi*fs[i]*times[j]);
+        chi[i] += ((D1[j]-F1)*(D1[j]-F1) + (D2[j]-F2)*(D2[j]-F2))/(errors[j]*errors[j]);
       }
+  }
+  for (i=0;i<num_f;i++)
+  {
       if (chi[i] < vfit.min_chi)
       {
         vfit.min_chi = chi[i];
@@ -375,12 +388,15 @@ struct one_param_fit get_v_brute(struct RadarParm *prm, float *good_lags, int go
     }
   }
 
-
-
   vfit.param *= lamda/2.;
   vfit.left_p *= lamda/2.;
   vfit.right_p *= lamda/2.;
 
+  free(times);
+  free(D1);
+  free(D2);
+  free(exp_factors);
+  free(errors);
   free(fs);
   free(chi);
 
@@ -396,8 +412,7 @@ struct one_param_fit get_w_brute(struct RadarParm *prm, float *good_lags, int go
 {
 
   int i,j,k,lag,L;
-  float time;
-  float F,D;
+  float F;
   int min_ind;
   const float delta_chi = 9.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
   const int num_w = 1000;
@@ -414,44 +429,54 @@ struct one_param_fit get_w_brute(struct RadarParm *prm, float *good_lags, int go
   /* spectral width and chi-squared arrays */
   float *ws = malloc(num_w*sizeof(float));
   float *chi = malloc(num_w*sizeof(float));
+  float *times = malloc(goodcnt*sizeof(float));
+  float *D = malloc(goodcnt*sizeof(float));
+  float *errors = malloc(goodcnt*sizeof(float));
 
+  for(j=0;j<goodcnt;j++)
+  {
+    lag = (int)(good_lags[j]);
+    /*tauscan AND new ROS*/
+    if((tauflg) && prm->mplgs == 18)
+    {
+      L = lag;
+    } else {  /*non-tauscan OR old ROS*/
+      for(k=0;k<prm->mplgs;k++)
+      {
+        if(abs(prm->lag[0][k]-prm->lag[1][k])==lag)
+        {
+          L = k;
+        }
+      }
+    }
+    times[j] = tau*lag;
+    D[j] = lagpwr[lag];
+    errors[j] = error[L];
+  }
 
   ws[0] = min_w;
   chi[0] = 0.0;
   min_ind = 0;
   wfit.min_chi = chi[0];
   wfit.param = ws[0];
+
+  /* initialize chi array and generate an array of spectral widths */
+  for (i=1;i<num_w;i++)
+  {
+    ws[i] = ws[i-1] + ws_step;
+    chi[i] = 0.0;
+  }
+  /* calculate chi2 at each spectral width */
   for (i=0;i<num_w;i++)
   {
-      /* initialize chi array and generate an array of spectral widths */
-      if (i != 0)
-      {
-        ws[i] = ws[i-1] + ws_step;
-        chi[i] = 0.0;
-      }
-
-      /* calculate chi2 at each spectral width */
       for(j=0;j<goodcnt;j++)
       {
-        lag = (int)(good_lags[j]);
-        /*tauscan AND new ROS*/
-        if((tauflg) && prm->mplgs == 18)
-        {
-          L = lag;
-        } else {  /*non-tauscan OR old ROS*/
-          for(k=0;k<prm->mplgs;k++)
-          {
-            if(abs(prm->lag[0][k]-prm->lag[1][k])==lag)
-            {
-              L = k;
-            }
-          }
-        }
-        time = tau*lag;
-        D = lagpwr[lag];
-        F = lagpwr[0]*exp(-time*2.*pi*ws[i]/lamda);
-        chi[i] += (D-F)*(D-F)/(error[L]*error[L]);
+        F = lagpwr[0]*exp(-times[j]*2.*pi*ws[i]/lamda);
+        chi[i] += (D[j]-F)*(D[j]-F)/(errors[j]*error[j]);
       }
+  }
+  for (i=0;i<num_w;i++)
+  {
       if (chi[i] < wfit.min_chi)
       {
         wfit.min_chi = chi[i];
@@ -481,7 +506,9 @@ struct one_param_fit get_w_brute(struct RadarParm *prm, float *good_lags, int go
     }
   }
 
-
+  free(times);
+  free(D);
+  free(errors);
   free(ws);
   free(chi);
 
