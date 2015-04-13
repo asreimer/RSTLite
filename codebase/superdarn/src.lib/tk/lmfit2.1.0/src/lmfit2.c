@@ -283,82 +283,64 @@ void lm_noise_stat(struct RadarParm *prm, struct RawData * raw,
 /* Function that calculates the "best fit" velocity for the decaying complex
 sinusoidal model of the SuperDARN ACF. This function requires previous 
 knowledge of the spectral width as it only fits for the velocity. */
-struct one_param_fit get_v_brute(struct RadarParm *prm, float *good_lags, int goodcnt, 
-                                 float *repwr, float *impwr, float *error, float width, int tauflg)
+struct one_param_fit get_v_brute(struct RadarParm *prm, double *good_lags, int goodcnt, 
+                                 int *lag_inds, double *repwr, double *impwr, float *error, double width)
 {
   
   int i,j,k,lag,L;
-  float F1,F2;
   int min_ind;
-  const float delta_chi = 9.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
+  double F1,F2;
+  const double delta_chi = 9.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
   const int num_f = 1000;
-  const float nyquist_f = 1.0/(2.0 * prm->mpinc * 1.e-6);
-  const float f_step = (nyquist_f - (-nyquist_f)) / ((float)(num_f) - 1);  
-  const float tau = prm->mpinc*1.e-6;
-  const float pi = 3.1415926;
-  const float lamda = 299792458.0/(prm->tfreq*1000.0);
+  const double nyquist_f = 1.0/(2.0 * prm->mpinc * 1.e-6);
+  const double f_step = (nyquist_f - (-nyquist_f)) / ((double)(num_f) - 1);  
+  const double tau = prm->mpinc*1.e-6;
+  const double pi = 3.1415926;
+  const double lamda = 299792458.0/(prm->tfreq*1000.0);
 
   /* temporary variables for output */
   struct one_param_fit vfit;
 
   /* frequency and chi-squared arrays */
-  float *fs = malloc(num_f*sizeof(float));
-  float *chi = malloc(num_f*sizeof(float));
-  float *times = malloc(goodcnt*sizeof(float));
-  float *D1 = malloc(goodcnt*sizeof(float));
-  float *D2 = malloc(goodcnt*sizeof(float));
-  float *exp_factors = malloc(goodcnt*sizeof(float));
-  float *errors = malloc(goodcnt*sizeof(float));
+  double *fs = malloc(num_f*sizeof(double));
+  double *chi = malloc(num_f*sizeof(double));
+  double *times = malloc(goodcnt*sizeof(double));
+  double *D1 = malloc(goodcnt*sizeof(double));
+  double *D2 = malloc(goodcnt*sizeof(double));
+  double *exp_factors = malloc(goodcnt*sizeof(double));
+  double *errors = malloc(goodcnt*sizeof(double));
 
   for(j=0;j<goodcnt;j++)
   {
     lag = (int)(good_lags[j]);
-    /*tauscan AND new ROS*/
-    if((tauflg) && prm->mplgs == 18)
-    {
-      L = lag;
-    } else {  /*non-tauscan OR old ROS*/
-      for(k=0;k<prm->mplgs;k++)
-      {
-        if(abs(prm->lag[0][k]-prm->lag[1][k])==lag)
-        {
-          L = k;
-        }
-      }
-    }
     times[j] = tau*lag;
     exp_factors[j] = repwr[0]*exp(-times[j]*2.*pi*width/lamda);
     D1[j] = repwr[lag];
     D2[j] = impwr[lag];
-    errors[j] = error[L];
+    errors[j] = (double)(error[lag_inds[j]]);
   }
 
-  fs[0] = -nyquist_f;
-  chi[0] = 0.0;
-  min_ind = 0;
-  vfit.min_chi = chi[0];
-  vfit.param = fs[0];
-
   /* initialize chi array and generate an array of spectral widths */
-  for (i=1;i<num_f;i++)
+  for (i=0;i<num_f;i++)
   {
-    
-    fs[i] = fs[i-1] + f_step;
+    fs[i] = -nyquist_f + i*f_step;
     chi[i] = 0.0;
   }
 
   /* calculate chi2 at each velocity */
+  min_ind = 0;
+  vfit.min_chi = 1000000000.;
+  vfit.param = fs[0];
+
   for (i=0;i<num_f;i++)
   {
       for(j=0;j<goodcnt;j++)
       {
         F1 = exp_factors[j]*cos(2.*pi*fs[i]*times[j]);
         F2 = exp_factors[j]*sin(2.*pi*fs[i]*times[j]);
-        chi[i] += ((D1[j]-F1)*(D1[j]-F1) + (D2[j]-F2)*(D2[j]-F2))/(errors[j]*errors[j]);
+        chi[i] = chi[i] + ((D1[j]-F1)*(D1[j]-F1) + (D2[j]-F2)*(D2[j]-F2))/(errors[j]*errors[j]);
       }
-  }
-  for (i=0;i<num_f;i++)
-  {
+
       if (chi[i] < vfit.min_chi)
       {
         vfit.min_chi = chi[i];
@@ -407,66 +389,50 @@ struct one_param_fit get_v_brute(struct RadarParm *prm, float *good_lags, int go
 /* Function that calculates the "best fit" spectral width for the 
 decaying complex sinusoidal model of the SuperDARN ACF. Function 
 assumes a decaying exponential ACF envelope. */
-struct one_param_fit get_w_brute(struct RadarParm *prm, float *good_lags, int goodcnt, 
-                                 float *lagpwr,float *error,int tauflg)
+struct one_param_fit get_w_brute(struct RadarParm *prm, double *good_lags, int goodcnt, 
+                                 int *lag_inds, double *lagpwr, float *error)
 {
 
   int i,j,k,lag,L;
-  float F;
+  double F;
   int min_ind;
-  const float delta_chi = 9.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
+  const double delta_chi = 9.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
   const int num_w = 1000;
-  const float max_w = 1000.0;
-  const float min_w = 0.0;
-  const float ws_step = (max_w - min_w) / ((float)(num_w) - 1);  
-  const float tau = prm->mpinc*1.e-6;
-  const float pi = 3.1415926;
-  const float lamda = 299792458.0/(prm->tfreq*1000.0);
+  const double max_w = 1000.0;
+  const double min_w = 0.0;
+  const double ws_step = (max_w - min_w) / ((double)(num_w) - 1);  
+  const double tau = prm->mpinc*1.e-6;
+  const double pi = 3.1415926;
+  const double lamda = 299792458.0/(prm->tfreq*1000.0);
 
   /* temporary variables for output */
   struct one_param_fit wfit;
 
   /* spectral width and chi-squared arrays */
-  float *ws = malloc(num_w*sizeof(float));
-  float *chi = malloc(num_w*sizeof(float));
-  float *times = malloc(goodcnt*sizeof(float));
-  float *D = malloc(goodcnt*sizeof(float));
-  float *errors = malloc(goodcnt*sizeof(float));
+  double *ws = malloc(num_w*sizeof(double));
+  double *chi = malloc(num_w*sizeof(double));
+  double *times = malloc(goodcnt*sizeof(double));
+  double *D = malloc(goodcnt*sizeof(double));
+  double *errors = malloc(goodcnt*sizeof(double));
 
   for(j=0;j<goodcnt;j++)
   {
     lag = (int)(good_lags[j]);
-    /*tauscan AND new ROS*/
-    if((tauflg) && prm->mplgs == 18)
-    {
-      L = lag;
-    } else {  /*non-tauscan OR old ROS*/
-      for(k=0;k<prm->mplgs;k++)
-      {
-        if(abs(prm->lag[0][k]-prm->lag[1][k])==lag)
-        {
-          L = k;
-        }
-      }
-    }
     times[j] = tau*lag;
     D[j] = lagpwr[lag];
-    errors[j] = error[L];
+    errors[j] = (double)(error[lag_inds[j]]);
   }
 
-  ws[0] = min_w;
-  chi[0] = 0.0;
-  min_ind = 0;
-  wfit.min_chi = chi[0];
-  wfit.param = ws[0];
-
   /* initialize chi array and generate an array of spectral widths */
-  for (i=1;i<num_w;i++)
+  for (i=0;i<num_w;i++)
   {
-    ws[i] = ws[i-1] + ws_step;
+    ws[i] = min_w + i*ws_step;
     chi[i] = 0.0;
   }
   /* calculate chi2 at each spectral width */
+  min_ind = 0;
+  wfit.min_chi = 1000000000.;
+  wfit.param = ws[0];
   for (i=0;i<num_w;i++)
   {
       for(j=0;j<goodcnt;j++)
@@ -474,9 +440,7 @@ struct one_param_fit get_w_brute(struct RadarParm *prm, float *good_lags, int go
         F = lagpwr[0]*exp(-times[j]*2.*pi*ws[i]/lamda);
         chi[i] += (D[j]-F)*(D[j]-F)/(errors[j]*error[j]);
       }
-  }
-  for (i=0;i<num_w;i++)
-  {
+
       if (chi[i] < wfit.min_chi)
       {
         wfit.min_chi = chi[i];
@@ -496,7 +460,7 @@ struct one_param_fit get_w_brute(struct RadarParm *prm, float *good_lags, int go
     }
   }
 
-  for (i=min_ind;i>=0;i--)
+  for (i=min_ind;i>-1;i--)
   {
     if (chi[i] < wfit.min_chi + delta_chi)
     {
@@ -533,15 +497,16 @@ double get_w_and_d_brute(struct RadarParm *prm,struct RawData *raw,
 void lmfit2(struct RadarParm *prm,struct RawData *raw,
               struct FitData *fit, struct FitBlock *fblk, int print)
 {
-  float minpwr  = 3.0;
+  int k;
+  double minpwr  = 3.0;
   double skynoise = 0.;
   int   minlag  = 6;
   int pwr_flg,fit_flg;
-  float *lagpwr=NULL,*good_lags=NULL;
-  float *repwr=NULL, *impwr=NULL;
-  float lag0pwr,re,im;
-  float fitted_width=0.0,fitted_velocity=0.0;
-  float dog;
+  int *lag_inds=NULL;
+  double *lagpwr=NULL,*good_lags=NULL;
+  double *repwr=NULL, *impwr=NULL;
+  double lag0pwr,re,im;
+  double dog;
   int   *lag_avail=NULL,availcnt=0,goodcnt=0;
   int   lastlag,lag,i,j,R,L,mplgs,tauflg = 0;
   int status;
@@ -579,11 +544,12 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
   }
 
   /*define some stuctures using # of lags*/
-  lagpwr       = malloc(sizeof(float)*(lastlag+1));
-  repwr       = malloc(sizeof(float)*(lastlag+1));
-  impwr       = malloc(sizeof(float)*(lastlag+1));
+  lagpwr       = malloc(sizeof(double)*(lastlag+1));
+  repwr       = malloc(sizeof(double)*(lastlag+1));
+  impwr       = malloc(sizeof(double)*(lastlag+1));
   lag_avail    = malloc(sizeof(int)*(lastlag+1));
-  good_lags    = malloc(sizeof(float)*(lastlag+1));
+  good_lags    = malloc(sizeof(double)*(lastlag+1));
+  lag_inds = malloc((lastlag+1)*sizeof(int));
 
   /*setup fitblock parameter*/
   setup_fblk(prm, raw, fblk);
@@ -728,6 +694,29 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
         goodcnt++;
       }
 
+      if((tauflg) && prm->mplgs == 18)
+      {
+        /*tauscan AND new ROS*/
+        for(j=0;j<goodcnt;j++)
+        {
+          lag_inds[j] = (int)(good_lags[j]);
+        }
+      } else {   
+        /*non-tauscan OR old ROS*/
+        for(j=0;j<goodcnt;j++)
+        {
+          lag = (int)(good_lags[j]);       
+          for(k=0;k<prm->mplgs;k++)
+          {
+            if(abs(prm->lag[0][k]-prm->lag[1][k])==lag)
+            {
+              lag_inds[j] = k;
+              break;
+            }
+          }
+        }
+      }
+
       acf_error(prm->mplgs, pwrd[R], skynoise, selfclutter, prm->nave, error);
       error[0] = lag0error[R];
 
@@ -736,10 +725,10 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
       /**********************/
 
       /* First fit for the spectral width, assuming exponential ACF envelope */
-      wfit = get_w_brute(prm,good_lags,goodcnt,lagpwr,error,tauflg);
+      wfit = get_w_brute(prm,good_lags,goodcnt,lag_inds,lagpwr,error);
 
       /* Next fit for the velocity, using fitted spectral width, assuming exponential ACF envelope */
-      vfit = get_v_brute(prm,good_lags,goodcnt,repwr,impwr,error,wfit.param,tauflg);
+      vfit = get_v_brute(prm,good_lags,goodcnt,lag_inds,repwr,impwr,error,wfit.param);
 
       /* Were the fits good? Use reduced chi**2 to determine yes/no */
       /*degrees of freedom */
@@ -771,7 +760,7 @@ void lmfit2(struct RadarParm *prm,struct RawData *raw,
     }
   }
 
-
+  free(lag_inds);
   free(lagpwr);
   free(repwr);
   free(impwr);
