@@ -399,7 +399,7 @@ struct one_param_fit get_w_brute(struct RadarParm *prm, double *good_lags, int g
   const double delta_chi = 9.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
   const int num_w = 1000;
   const double max_w = 1000.0;
-  const double min_w = 0.0;
+  const double min_w = -100.0;
   const double ws_step = (max_w - min_w) / ((double)(num_w) - 1);  
   const double tau = prm->mpinc*1.e-6;
   const double pi = 3.1415926;
