@@ -738,7 +738,7 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
 
       /* Now save parameters to datafile */
       fit->rng[R].p_l   = lag0pwr;
-      fit->rng[R].p_l_err = lag0pwr/log(10.0)*lag0error[R]/skynoise; /* propagated from error in amplitude */
+      fit->rng[R].p_l_err = 10.0/log(10.0)*log(pwrd[R]/skynoise)*lag0error[R]/skynoise; /* propagated from error in amplitude */
       fit->rng[R].v     = vfit.param;
       fit->rng[R].w_l   = wfit.param;
       /* What are the error bars on the fitted parameters? */
