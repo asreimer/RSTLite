@@ -1,5 +1,5 @@
 
-/* lmfit.c
+/* bffit.c
    ==========
 */
 
@@ -17,7 +17,7 @@
 #include "rawdata.h" 
 #include "fitdata.h"
 #include "fitblk.h"
-#include "lmfit2.h"
+#include "bffit.h"
 #include "badsmp.h"
 #include "badlags.h"
 #include "mpfit.h"
@@ -494,7 +494,7 @@ double get_w_and_d_brute(struct RadarParm *prm,struct RawData *raw,
 }
 */
 
-void lmfit2(struct RadarParm *prm,struct RawData *raw,
+void bffit(struct RadarParm *prm,struct RawData *raw,
               struct FitData *fit, struct FitBlock *fblk, int print)
 {
   int k;

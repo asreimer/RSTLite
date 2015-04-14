@@ -1,4 +1,4 @@
-/* make_lmfit2.c
+/* make_bffit.c
    ==========
    Author: A. S. Reimer
 */
@@ -28,7 +28,7 @@
 #include "fitdata.h" 
 #include "radar.h"
 
-#include "lmfit2.h"
+#include "bffit.h"
 #include "fitacf.h"
 #include "rawread.h"
 #include "fitwrite.h"
@@ -208,7 +208,7 @@ int main(int argc,char *argv[])
 
   fblk=FitACFMake(site,prm->time.yr);
 
-  lmfit2(prm,raw,fit,fblk,vb);
+  bffit(prm,raw,fit,fblk,vb);
 
   if (old)
   {
@@ -256,7 +256,7 @@ int main(int argc,char *argv[])
 	      prm->time.dy,prm->time.hr,prm->time.mt,prm->time.sc,prm->bmnum);
 
     if (status==0)
-      lmfit2(prm,raw,fit,fblk,vb);
+      bffit(prm,raw,fit,fblk,vb);
 
   } while (status==0);
 

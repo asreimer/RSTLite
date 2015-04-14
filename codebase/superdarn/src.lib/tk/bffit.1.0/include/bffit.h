@@ -1,9 +1,9 @@
-/* lmfit2.h
+/* bffit.h
    ==========
 */
 
-#ifndef _lmfit2_H
-#define _lmfit2_H
+#ifndef _bffit_H
+#define _bffit_H
 
 #ifndef PULSE_SIZE
 #define PULSE_SIZE 256
@@ -23,7 +23,7 @@ struct exdatapoints
   float lagpwr;
 };
 
-void lmfit2(struct RadarParm *prm,struct RawData *ptr,
+void bffit(struct RadarParm *prm,struct RawData *ptr,
                 struct FitData *fit,struct FitBlock *fblk, int print);
 double getguessex(struct RadarParm *prm,struct RawData *raw,
               struct FitData *fit, struct FitBlock *fblk, int rang, double skynoise);

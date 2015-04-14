@@ -1,4 +1,4 @@
-# makefile for lmfit
+# makefile for bffit
 #
 #
 include $(MAKECFG).$(SYSTEM)
@@ -6,11 +6,11 @@ include $(MAKECFG).$(SYSTEM)
 
 
 INCLUDE= -I$(IPATH)/base -I$(IPATH)/general -I$(IPATH)/superdarn -I$(IPATH)/analysis
-SRC = lmfit2.c lmfit2.h
-OBJS = lmfit2.o
+SRC = bffit.c bffit.h
+OBJS = bffit.o
 INC=$(IPATH)/superdarn
 DSTPATH=$(LIBPATH)
-OUTPUT=lmfit2
+OUTPUT=bffit
 LINK="1"
 
 
