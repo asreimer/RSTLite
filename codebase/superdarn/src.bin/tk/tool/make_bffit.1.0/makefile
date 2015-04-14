@@ -5,9 +5,9 @@
 include $(MAKECFG).$(SYSTEM)
 
 INCLUDE=-I$(IPATH)/base -I$(IPATH)/general -I$(IPATH)/superdarn
-OBJS = make_lmfit2.o
+OBJS = make_bffit.o
 
-SRC=make_lmfit2.c
+SRC=make_bffit.c
 
 DSTPATH = $(BINPATH)
 OUTPUT = make_bffit
