@@ -36,6 +36,16 @@ struct one_param_fit {
   float right_p;
 };
 
+struct two_param_fit {
+  float param1;
+  float param2;
+  float min_chi;
+  float left_p1;
+  float right_p1;
+  float left_p2;
+  float right_p2;
+};
+
 int lm_dbl_cmp(const void *x,const void *y) 
 {
   double *a,*b;
@@ -244,7 +254,7 @@ double calc_phi0(float *x,float *y, float m, int n)
 
 
 /*function to calculate noise level*/
-void lm_noise_stat(struct RadarParm *prm, struct RawData * raw,
+void lm_noise_stat(struct RadarParm *prm, struct FitBlock * fblk,
                 double * skynoise)
 {
   int j=0, R, i=0;
@@ -254,7 +264,7 @@ void lm_noise_stat(struct RadarParm *prm, struct RawData * raw,
     j=0;
     for(R=0;R<prm->nrang;R++)
     {
-      pwrd[j] = raw->pwr0[R];
+      pwrd[j] = fblk->prm.pwr0[R];
       if(pwrd[j] > 0.)
         j++;
     }
@@ -385,7 +395,6 @@ struct one_param_fit get_v_brute(struct RadarParm *prm, double *good_lags, int g
   return vfit;
 }
 
-
 /* Function that calculates the "best fit" spectral width for the 
 decaying complex sinusoidal model of the SuperDARN ACF. Function 
 assumes a decaying exponential ACF envelope. */
@@ -479,24 +488,163 @@ struct one_param_fit get_w_brute(struct RadarParm *prm, double *good_lags, int g
   return wfit;
 }
 
-/* Use JP Villain power envelope and extract spectral width and diffusion coefficient 
-
-NOT READY YET. TO BE IMPLEMENTED.
-
-double get_w_and_d_brute(struct RadarParm *prm,struct RawData *raw,
-                      struct FitData *fit, struct FitBlock *fblk,
-		      int rang, double skynoise)
+/* Use JP Villain power envelope */
+/* Function that calculates the "best fit" spectral width and diffusion coefficient 
+for the decaying complex sinusoidal model of the SuperDARN ACF. Function assumes a 
+decaying exponential ACF envelope. */
+struct two_param_fit get_w_and_d_brute(struct RadarParm *prm, double *good_lags, int goodcnt, 
+                                       int *lag_inds, double *lagpwr, float *error)
 {
-  int i,j,lastlag;
-  float num_w = 1000.0;
 
-  return 0;
+  int i,j,k,lag,L;
+  double F;
+  int min_ind1,min_ind2;
+  const double delta_chi = 9.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
+  const int num_w = 1000;
+  const double max_w = 1000.0;
+  const double min_w = -100.0;
+  const double ws_step = (max_w - min_w) / ((double)(num_w) - 1);  
+
+  const int num_tl = 1000;
+  const double max_tl = 0.1;
+  const double min_tl = 1e-6;
+  const double tl_step = (max_tl - min_tl) / ((double)(num_tl) - 1);  
+
+  const double tau = prm->mpinc*1.e-6;
+  const double pi = 3.1415926;
+  const double lamda = 299792458.0/(prm->tfreq*1000.0);
+  const double kmag = 2.*pi/lamda;
+
+  /* temporary variables for output */
+  struct two_param_fit wtlfit;
+
+  /* spectral width and chi-squared arrays */
+  double *ws = malloc(num_w*sizeof(double));
+  double *tl = malloc(num_tl*sizeof(double));
+  double **chi = malloc(num_w*sizeof(double *));
+  for (i=0;i<num_w;i++)
+  {
+    chi[i] = malloc(num_tl*sizeof(double));
+  }
+  double *times = malloc(goodcnt*sizeof(double));
+  double *D = malloc(goodcnt*sizeof(double));
+  double *errors = malloc(goodcnt*sizeof(double));
+
+  for(k=0;k<goodcnt;k++)
+  {
+    lag = (int)(good_lags[k]);
+    times[k] = tau*lag;
+    D[k] = lagpwr[lag];
+    errors[k] = (double)(error[lag_inds[k]]);
+  }
+
+  /* initialize chi array and generate an array of spectral widths */
+  for (i=0;i<num_w;i++)
+  {
+    ws[i] = min_w + i*ws_step;
+  }
+  for (j=0;j<num_tl;j++)
+  {
+    tl[j] = min_tl + j*tl_step;
+  }
+  for (i=0;i<num_w;i++)
+  {
+    for (j=0;j<num_tl;j++)
+    {
+      chi[i][j] = 0.0;
+    }
+  }
+
+  /* calculate chi2 at each spectral width */
+  min_ind1 = 0;
+  min_ind2 = 0;
+  wtlfit.min_chi = 1000000000.;
+  wtlfit.param1 = ws[0];
+  wtlfit.param2 = tl[0];
+
+  for (i=0;i<num_w;i++)
+  {
+    for(j=0;j<num_tl;j++)
+    {
+      for(k=0;k<goodcnt;k++)
+      {
+        F = lagpwr[0]*exp(-times[k]*kmag*ws[i] - kmag*ws[i]*tl[j]*(exp(-times[k]/tl[j]) - 1));
+        chi[i][j] += (D[k]-F)*(D[k]-F)/(errors[k]*error[k]);
+      }
+      
+      if (chi[i][j] < wtlfit.min_chi)
+      {
+        wtlfit.min_chi = chi[i][j];
+        wtlfit.param1 = ws[i];
+        wtlfit.param2 = tl[j];
+        min_ind1 = i;
+        min_ind2 = j;
+      }
+    }
+  }
+  
+  /* using 3-sigma, get error bars for spectral width (assymetric) */
+  for (i=min_ind1;i<num_w;i++)
+  {
+    if (chi[i][min_ind2] < wtlfit.min_chi + delta_chi)
+    {
+      wtlfit.right_p1 = ws[i];
+    } else {
+      break;
+    }
+  }
+
+  for (i=min_ind1;i>-1;i--)
+  {
+    if (chi[i][min_ind2] < wtlfit.min_chi + delta_chi)
+    {
+      wtlfit.left_p1 = ws[i];
+    } else {
+      break;
+    }
+  }
+
+  for (j=min_ind2;j<num_tl;j++)
+  {
+    if (chi[min_ind1][j] < wtlfit.min_chi + delta_chi)
+    {
+      wtlfit.right_p2 = tl[j];
+    } else {
+      break;
+    }
+  }
+
+  for (j=min_ind2;j>-1;j--)
+  {
+    if (chi[min_ind1][j] < wtlfit.min_chi + delta_chi)
+    {
+      wtlfit.left_p2 = tl[j];
+    } else {
+      break;
+    }
+  }
+
+  free(times);
+  free(D);
+  free(errors);
+  free(ws);
+  for (i=0;i<num_w;i++)
+  {
+    free(chi[i]);
+  }
+  free(chi);
+
+  return wtlfit;
 }
-*/
 
 void bffit(struct RadarParm *prm,struct RawData *raw,
               struct FitData *fit, struct FitBlock *fblk, int print)
 {
+
+  /*fprintf(stderr,"Starting bffit function...\n");
+  fprintf(stderr,"%d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %lf\n",prm->stid,prm->time.yr,prm->time.mo,
+            prm->time.dy,prm->time.hr,prm->time.mt,(int)prm->time.sc,prm->bmnum,
+            prm->nave,prm->cp,prm->lagfr,prm->smsep,fblk->prm.vdir);*/
   int k;
   double minpwr  = 3.0;
   double skynoise = 0.;
@@ -562,7 +710,7 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
   }
 
   /*calculate noise levels*/
-  lm_noise_stat(prm,raw,&skynoise);
+  lm_noise_stat(prm,fblk,&skynoise);
   if(!tauflg)
   {
     /*check for stereo operation*/
@@ -597,7 +745,7 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
   /* need an array of lag0 power without noise for selfclutter calculation */
   for (R=0;R<prm->nrang;R++)
   {
-    pwrd[R] = raw->acfd[0][R*prm->mplgs] - skynoise;
+    pwrd[R] = fblk->prm.pwr0[R] - skynoise;
     if (pwrd[R] < 0)
       pwrd[R] = 0;
   }
@@ -610,9 +758,9 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
     /* subtract noise level from lag 0 if tauscan */
     if(!(tauflg && prm->mplgs == 18))
     {
-      raw->acfd[0][R*prm->mplgs] -= skynoise;
-      if (raw->acfd[0][R*prm->mplgs] < 0)
-        raw->acfd[0][R*prm->mplgs] = 0;
+      fblk->prm.pwr0[R] -= skynoise;
+      if (fblk->prm.pwr0[R] < 0)
+        fblk->prm.pwr0[R] = 0;
     }
 
     /*initialize parameters*/
@@ -639,12 +787,13 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
     status = Cmpse(&fblk->prm, prm->lag, R, selfclutter, badrng, pwrd);
 
     /*calculate SNR of lag0power*/
-    lag0pwr  = 10.0*log10((raw->acfd[0][R*prm->mplgs])/skynoise);
+    lag0pwr  = 10.0*log10(pwrd[R]/skynoise);
 
     /*not tauscan, check for badlags*/
     if(!tauflg) tx_flag_lags(R+1,badlag,&badsmp,&fblk->prm);
 
     /*Preliminaries, badlag checking, power level checking*/
+
     for(L=0;L<mplgs;L++)
     {
       if(tauflg && prm->mplgs == 18) /*tauscan , new ROS*/
@@ -654,13 +803,15 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
         lag = abs(prm->lag[0][L] - prm->lag[1][L]);
       }
 
-      re  = raw->acfd[0][R*prm->mplgs+L];
-      im  = raw->acfd[1][R*prm->mplgs+L];
+      re  = fblk->acfd[R*fblk->prm.mplgs+L].x;
+      im  = fblk->acfd[R*fblk->prm.mplgs+L].y;
       lagpwr[lag] = sqrt(re*re + im*im);
       repwr[lag] = re;
       impwr[lag] = im;
 
-      if((tauflg || badlag[L] == 0) && lagpwr[lag]>raw->acfd[0][R*prm->mplgs]/sqrt(1.0*prm->nave))
+
+
+      if((tauflg || badlag[L] == 0))/* && lagpwr[lag]>pwrd[R]/sqrt(1.0*prm->nave))*/
       {
         lag_avail[availcnt] = lag;
         availcnt++;
@@ -675,9 +826,9 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
     /* basically, pwr_flag == 1 if SNR >= 1 at lag0 */
     if(tauflg) /* for tauscan */
     {
-      pwr_flg = (lag0pwr>=minpwr);
+      pwr_flg = (lag0pwr >= minpwr);
     } else {   /* for everything else */
-      pwr_flg = raw->acfd[0][R*prm->mplgs] >= skynoise;
+      pwr_flg = (pwrd[R] >= skynoise);
     }
 
     pwr_flg = 1;
@@ -717,12 +868,13 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
         }
       }
 
-      acf_error(prm->mplgs, pwrd[R], skynoise, selfclutter, prm->nave, error);
+      acf_error(prm->mplgs, pwrd[R], 0.0, selfclutter, prm->nave, error);
       error[0] = lag0error[R];
 
       /**********************/
       /*single component fit*/
       /**********************/
+
 
       /* First fit for the spectral width, assuming exponential ACF envelope */
       wfit = get_w_brute(prm,good_lags,goodcnt,lag_inds,lagpwr,error);
@@ -734,7 +886,7 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
       /*degrees of freedom */
       /*dog = number of data points - # of fitted parameters - 1 */
       dog = ((float)(goodcnt)) - 1 - 1;
-      fit_flg = ((wfit.min_chi/dog < 1) && (vfit.min_chi/dog < 1));      
+      fit_flg = 1; /*((wfit.min_chi/dog < 1) && (vfit.min_chi/dog < 1)); */
 
       /* Now save parameters to datafile */
       fit->rng[R].p_l   = lag0pwr;

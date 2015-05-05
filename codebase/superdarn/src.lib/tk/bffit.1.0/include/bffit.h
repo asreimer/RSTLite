@@ -29,7 +29,7 @@ double getguessex(struct RadarParm *prm,struct RawData *raw,
               struct FitData *fit, struct FitBlock *fblk, int rang, double skynoise);
 int singlefit(int m, int n, double *p, double *deviates,
                         double **derivs, void *private);
-void lm_noise_stat(struct RadarParm *prm, struct RawData * raw,
+void lm_noise_stat(struct RadarParm *prm, struct FitBlock *fblk,
                 double * skynoise);
 void setup_fblk(struct RadarParm *prm, struct RawData *raw,struct FitBlock *input);
 double calc_phi0(float *x,float *y, float m, int n);
