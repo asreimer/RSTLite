@@ -889,6 +889,7 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
       fit_flg = 1; /*((wfit.min_chi/dog < 1) && (vfit.min_chi/dog < 1)); */
 
       /* Now save parameters to datafile */
+      fit->rng[R].p_0   = lag0pwr;
       fit->rng[R].p_l   = lag0pwr;
       fit->rng[R].p_l_err = 10.0/log(10.0)*log(pwrd[R]/skynoise)*lag0error[R]/skynoise; /* propagated from error in amplitude */
       fit->rng[R].v     = vfit.param;
