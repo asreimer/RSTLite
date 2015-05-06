@@ -300,8 +300,8 @@ struct one_param_fit get_v_brute(struct RadarParm *prm, double *good_lags, int g
   int i,j,k,lag,L;
   int min_ind;
   double F1,F2;
-  const double delta_chi = 9.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
-  const int num_f = 1000;
+  const double delta_chi = 25.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
+  const int num_f = 1001;
   const double nyquist_f = 1.0/(2.0 * prm->mpinc * 1.e-6);
   const double f_step = (nyquist_f - (-nyquist_f)) / ((double)(num_f) - 1);  
   const double tau = prm->mpinc*1.e-6;
@@ -339,7 +339,7 @@ struct one_param_fit get_v_brute(struct RadarParm *prm, double *good_lags, int g
 
   /* calculate chi2 at each velocity */
   min_ind = 0;
-  vfit.min_chi = 1000000000.;
+  vfit.min_chi = 10000000000000000.;
   vfit.param = fs[0];
 
   for (i=0;i<num_f;i++)
@@ -362,22 +362,22 @@ struct one_param_fit get_v_brute(struct RadarParm *prm, double *good_lags, int g
   /* using 3-sigma, get error bars for spectral width (assymetric) */
   for (i=min_ind;i<num_f;i++)
   {
-    if (chi[i] < vfit.min_chi + delta_chi)
+    if (chi[i] <= vfit.min_chi + delta_chi)
     {
       vfit.right_p = fs[i];
-    } else {
+    } /* else {
       break;
-    }
+    } */
   }
 
-  for (i=min_ind;i>=0;i--)
+  for (i=min_ind;i>-1;i--)
   {
-    if (chi[i] < vfit.min_chi + delta_chi)
+    if (chi[i] <= vfit.min_chi + delta_chi)
     {
       vfit.left_p = fs[i];
-    } else {
+    } /*else {
       break;
-    }
+    }*/
   }
 
   vfit.param *= lamda/2.;
@@ -405,8 +405,8 @@ struct one_param_fit get_w_brute(struct RadarParm *prm, double *good_lags, int g
   int i,j,k,lag,L;
   double F;
   int min_ind;
-  const double delta_chi = 9.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
-  const int num_w = 1000;
+  const double delta_chi = 25.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
+  const int num_w = 1001;
   const double max_w = 1000.0;
   const double min_w = -100.0;
   const double ws_step = (max_w - min_w) / ((double)(num_w) - 1);  
@@ -440,14 +440,15 @@ struct one_param_fit get_w_brute(struct RadarParm *prm, double *good_lags, int g
   }
   /* calculate chi2 at each spectral width */
   min_ind = 0;
-  wfit.min_chi = 1000000000.;
+  wfit.min_chi = 10000000000000000.;
   wfit.param = ws[0];
+
   for (i=0;i<num_w;i++)
   {
       for(j=0;j<goodcnt;j++)
       {
         F = lagpwr[0]*exp(-times[j]*2.*pi*ws[i]/lamda);
-        chi[i] += (D[j]-F)*(D[j]-F)/(errors[j]*error[j]);
+        chi[i] += (D[j]-F)*(D[j]-F)/(errors[j]*errors[j]);
       }
 
       if (chi[i] < wfit.min_chi)
@@ -461,22 +462,22 @@ struct one_param_fit get_w_brute(struct RadarParm *prm, double *good_lags, int g
   /* using 3-sigma, get error bars for spectral width (assymetric) */
   for (i=min_ind;i<num_w;i++)
   {
-    if (chi[i] < wfit.min_chi + delta_chi)
+    if (chi[i] <= wfit.min_chi + delta_chi)
     {
       wfit.right_p = ws[i];
     } else {
       break;
-    }
+    } 
   }
 
   for (i=min_ind;i>-1;i--)
   {
-    if (chi[i] < wfit.min_chi + delta_chi)
+    if (chi[i] <= wfit.min_chi + delta_chi)
     {
       wfit.left_p = ws[i];
     } else {
       break;
-    }
+    } 
   }
 
   free(times);
@@ -499,7 +500,7 @@ struct two_param_fit get_w_and_d_brute(struct RadarParm *prm, double *good_lags,
   int i,j,k,lag,L;
   double F;
   int min_ind1,min_ind2;
-  const double delta_chi = 9.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
+  const double delta_chi = 25.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
   const int num_w = 1000;
   const double max_w = 1000.0;
   const double min_w = -100.0;
@@ -746,8 +747,8 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
   for (R=0;R<prm->nrang;R++)
   {
     pwrd[R] = fblk->prm.pwr0[R] - skynoise;
-    if (pwrd[R] < 0)
-      pwrd[R] = 0;
+    if (pwrd[R] < skynoise*0.00001)
+      pwrd[R] = skynoise*0.00001;
   }
 
   status = lag0_error(prm->nrang, pwrd, skynoise, prm->nave, prm->nave, lag0error);
@@ -755,14 +756,6 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
   /* Loop every range gate and calculate parameters */
   for (R=0;R<prm->nrang;R++)
   {
-    /* subtract noise level from lag 0 if tauscan */
-    if(!(tauflg && prm->mplgs == 18))
-    {
-      fblk->prm.pwr0[R] -= skynoise;
-      if (fblk->prm.pwr0[R] < 0)
-        fblk->prm.pwr0[R] = 0;
-    }
-
     /*initialize parameters*/
     fit->rng[R].v        = 0.;
     fit->rng[R].v_err    = HUGE_VAL;
@@ -808,8 +801,6 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
       lagpwr[lag] = sqrt(re*re + im*im);
       repwr[lag] = re;
       impwr[lag] = im;
-
-
 
       if((tauflg || badlag[L] == 0))/* && lagpwr[lag]>pwrd[R]/sqrt(1.0*prm->nave))*/
       {
@@ -868,13 +859,12 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
         }
       }
 
-      acf_error(prm->mplgs, pwrd[R], 0.0, selfclutter, prm->nave, error);
+      acf_error(prm->mplgs, pwrd[R], skynoise, selfclutter, prm->nave, error);
       error[0] = lag0error[R];
 
       /**********************/
       /*single component fit*/
       /**********************/
-
 
       /* First fit for the spectral width, assuming exponential ACF envelope */
       wfit = get_w_brute(prm,good_lags,goodcnt,lag_inds,lagpwr,error);
@@ -891,7 +881,7 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
       /* Now save parameters to datafile */
       fit->rng[R].p_0   = lag0pwr;
       fit->rng[R].p_l   = lag0pwr;
-      fit->rng[R].p_l_err = 10.0/log(10.0)*log(pwrd[R]/skynoise)*lag0error[R]/skynoise; /* propagated from error in amplitude */
+      fit->rng[R].p_l_err = 10.0*log10((lag0error[R]+pwrd[R])/skynoise)-lag0pwr;
       fit->rng[R].v     = vfit.param;
       fit->rng[R].w_l   = wfit.param;
       /* What are the error bars on the fitted parameters? */
@@ -899,7 +889,7 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
       fit->rng[R].w_l_err = fabs(wfit.right_p - wfit.param);
       fit->rng[R].w_s_err = fabs(wfit.param - wfit.left_p);
       /* velocity - generally very close to symetric. Return largest of two. */
-      if (fabs(vfit.param - vfit.left_p) > fabs(vfit.right_p - vfit.param))
+      if (fabs(vfit.param - vfit.left_p) >= fabs(vfit.right_p - vfit.param))
       {
           fit->rng[R].v_err = fabs(vfit.param - vfit.left_p);
       } else {
@@ -907,7 +897,8 @@ void bffit(struct RadarParm *prm,struct RawData *raw,
       }
       fit->rng[R].nump  = goodcnt;
       fit->noise.skynoise = skynoise;
-      fit->rng[R].w_s   = 0;
+      fit->rng[R].w_s   = vfit.left_p;
+      fit->rng[R].p_s   = vfit.right_p;
       fit->rng[R].qflg  = fit_flg;
       fit->rng[R].gsct = (fabs(vfit.param)-(30-1./3.*fabs(wfit.param)) < 0);
     }
