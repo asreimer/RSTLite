@@ -300,7 +300,7 @@ struct one_param_fit get_v_brute(struct RadarParm *prm, double *good_lags, int g
   int i,j,k,lag,L;
   int min_ind;
   double F1,F2;
-  const double delta_chi = 25.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
+  const double delta_chi = 9.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
   const int num_f = 1001;
   const double nyquist_f = 1.0/(2.0 * prm->mpinc * 1.e-6);
   const double f_step = (nyquist_f - (-nyquist_f)) / ((double)(num_f) - 1);  
@@ -405,7 +405,7 @@ struct one_param_fit get_w_brute(struct RadarParm *prm, double *good_lags, int g
   int i,j,k,lag,L;
   double F;
   int min_ind;
-  const double delta_chi = 25.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
+  const double delta_chi = 9.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
   const int num_w = 1001;
   const double max_w = 1000.0;
   const double min_w = -100.0;
@@ -500,7 +500,7 @@ struct two_param_fit get_w_and_d_brute(struct RadarParm *prm, double *good_lags,
   int i,j,k,lag,L;
   double F;
   int min_ind1,min_ind2;
-  const double delta_chi = 25.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
+  const double delta_chi = 9.0; /* delta chi to calculate error bars 3sigma gives delta_chi = 9.0 */
   const int num_w = 1000;
   const double max_w = 1000.0;
   const double min_w = -100.0;
