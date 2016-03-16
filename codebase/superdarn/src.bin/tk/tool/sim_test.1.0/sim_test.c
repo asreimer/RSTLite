@@ -51,7 +51,7 @@ THE SOFTWARE.
 
 
 /* This function is used to populate the prm and fitacf structures that FitFread would normally do */
-int fitPop(struct RadarParm *prm, struct FitData *fit)
+int fitPop(struct RadarParm *prm, struct FitData *fit, int type)
 {
     int n;
     int num_iters = 5;
@@ -254,25 +254,55 @@ int fitPop(struct RadarParm *prm, struct FitData *fit)
         /* qflg */
         fit->rng[slist[x]].qflg = 1;
 
-        if ((x >= 13) && (x <= 17)) {
+        if (type == 0) {
+          /* pwr0 */
+          fit->rng[slist[x]].p_0 = 20;
+          /* gflg */
+          fit->rng[slist[x]].gsct = 0;
+          fit->rng[slist[x]].v = 0 + x*2000.0/((float)snum);
+          fit->rng[slist[x]].w_l = 50;
+        } else if (type == 1) { 
+          /* pwr0 */
+          fit->rng[slist[x]].p_0 = 20;
+          /* gflg */
+          fit->rng[slist[x]].gsct = 0;
+          fit->rng[slist[x]].v = 0 + x*2000.0/((float)snum);
+          fit->rng[slist[x]].w_l = 250;
+        } else if (type == 2) { 
+          /* pwr0 */
+          fit->rng[slist[x]].p_0 = 20;
+          /* gflg */
+          fit->rng[slist[x]].gsct = 0;
+          fit->rng[slist[x]].v = 0 + x*2000.0/((float)snum);
+          fit->rng[slist[x]].w_l = 500;
+        } else if (type == 3) { 
+          /* pwr0 */
+          fit->rng[slist[x]].p_0 = 20;
+          /* gflg */
+          fit->rng[slist[x]].gsct = 0;
+          fit->rng[slist[x]].v = 50;
+          fit->rng[slist[x]].w_l = 0 + x*1000.0/((float)snum);
+        } else if (type == 4) { 
+          /* pwr0 */
+          fit->rng[slist[x]].p_0 = 20;
+          /* gflg */
+          fit->rng[slist[x]].gsct = 0;
+          fit->rng[slist[x]].v = 250;
+          fit->rng[slist[x]].w_l = 0 + x*1000.0/((float)snum);
+        } else if (type == 5) { 
           /* pwr0 */
           fit->rng[slist[x]].p_0 = 20;
           /* gflg */
           fit->rng[slist[x]].gsct = 0;
           fit->rng[slist[x]].v = 500;
-          fit->rng[slist[x]].w_l = 100;
-        } else { /* if ((x >= 25) && (x <= 35)) { */
+          fit->rng[slist[x]].w_l = 0 + x*1000.0/((float)snum);
+        } else if (type == 6) { 
           /* pwr0 */
-          fit->rng[slist[x]].p_0 = 20;
+          fit->rng[slist[x]].p_0 = 0 + x*30.0/((float)snum);
           /* gflg */
-          fit->rng[slist[x]].gsct = 0; /*1;*/
-          fit->rng[slist[x]].v = 500; /*0.0001;*/
-          fit->rng[slist[x]].w_l = 100; /*0.0001;*/
-       /* } else {
-          fit->rng[slist[x]].p_0 = -10;
           fit->rng[slist[x]].gsct = 0;
-          fit->rng[slist[x]].v = 0;
-          fit->rng[slist[x]].w_l = 100; */
+          fit->rng[slist[x]].v = 250;
+          fit->rng[slist[x]].w_l = 250;
         }
 
         fit->rng[slist[x]].p_l = 0;
@@ -351,6 +381,7 @@ int main(int argc,char *argv[])
   int rt = 0; 				    /* variable to catch return values of fscanf, 
                                                prevents compile warnings which resulted in 
                                                bizzare terminal behaviour in Ubuntu 14.04 LTS */
+  int type = 0;
 
   /*other variables*/
   int s,lag;
@@ -390,6 +421,13 @@ char helpstr[] =
   "         have to be integrated seperately\n"
   "-samples: output raw samples (to iqdat file) instead of ACFs\n"
   "         default is output ACFs (to rawacf file)\n"
+  "-type: integer for simulation type: 0 for increasing velocity with width 50 m/s\n"
+  "                                    1 for increasing velocity with width 250 m/s\n"
+  "                                    2 for increasing velocity with width 500 m/s\n"
+  "                                    3 for increasing width with velocity 50 m/s\n"
+  "                                    4 for increasing width with velocity 250 m/s\n"
+  "                                    5 for increasing width with velocity 500 m/s\n"
+  "                                    6 for increasing SNR with velocity 250 m/s amd width 250 m/s\n"
   "\nNOTE: all option inputs must be integers\n";
 
 
@@ -425,6 +463,11 @@ char helpstr[] =
       scflg = 1;
       filename1 = argv[i+1];
       filename2 = argv[i+2];
+    }
+    else if (strcmp(argv[i], "-type") == 0)
+    {
+      type = (int)(*argv[i+1])-48;
+      fprintf(stderr,"type %d\n",type);
     }
     /*display help*/
     else if (strcmp(argv[i], "--help") == 0)
@@ -495,7 +538,7 @@ char helpstr[] =
      the fitPop function to populate the prm and fitacf structures! */
   /* s=FitFread(fitfp,prm,fitacf); */
 
-  s = fitPop(prm,fitacf);
+  s = fitPop(prm,fitacf,type);
   fprintf(stderr,"Status %d.\n",s);
   if (s==-1) {
     fprintf(stderr,"Error reading file.\n");
@@ -771,7 +814,7 @@ char helpstr[] =
  
  /* again, we want to use the fitPop function instead! */
  /* } while ((s=FitFread(fitfp,prm,fitacf)) !=-1); */
-  } while ((s=fitPop(prm,fitacf)) !=-1);
+  } while ((s=fitPop(prm,fitacf,type)) !=-1);
   FitFree(fitacf);
 
 /*  fclose(fitfp); using fitPop so this isn't needed */
