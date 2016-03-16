@@ -54,7 +54,7 @@ THE SOFTWARE.
 int fitPop(struct RadarParm *prm, struct FitData *fit, int type)
 {
     int n;
-    int num_iters = 5;
+    int num_iters = 1000;
     static int iters = 0;
 
     /* Populate the prm structure */
