@@ -451,8 +451,8 @@ void sim_data(double *t_d, double *t_g, double *t_c, double *v_dop, int * qflg,
   for (p=0;p<n_pul;p++)
   {
       smpnum = pulse_t[p]*taus;
-      tx[smpnum] = 0.0;
-      tx[smpnum+1] = 0.5;
+      tx[smpnum] = 1.0; /* 0.0; */
+      tx[smpnum+1] = 1.0; /* 0.5; */
   }   
 
   /*assign properties to the irregularities in each range gate*/
@@ -593,7 +593,7 @@ void sim_data(double *t_d, double *t_g, double *t_c, double *v_dop, int * qflg,
           }
           if (n_irreg > 0)
               raw_samples[smpnum] += amp0[r]*(creal(temp_raw) + I*cimag(temp_raw))/cabs(temp_raw);
-              raw_samples[smpnum] = (raw_samples[smpnum] + out_samples[kk*n_samples+smpnum])*tx[smpnum];
+              raw_samples[smpnum] = (raw_samples[smpnum] + out_samples[kk*n_samples+smpnum]); /* *tx[smpnum];*/
         }
         /*calculate an ACF from the raw samples*/
         for(p=0;p<n_pul;p++)
@@ -670,7 +670,7 @@ void sim_data(double *t_d, double *t_g, double *t_c, double *v_dop, int * qflg,
 
       /* Add noise if we calculated noise (out_samples[:]=0 if no noise) */
       for(p=0;p<n_samples;p++)
-         raw_samples[p] = (raw_samples[p] + out_samples[kk*n_samples+p])*tx[p];
+         raw_samples[p] = (raw_samples[p] + out_samples[kk*n_samples+p]); /* *tx[p];*/
 
       /*calculate an ACF from the raw samples*/
       for(r=0;r<nrang;r++)
