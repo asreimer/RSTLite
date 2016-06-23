@@ -1,5 +1,5 @@
 /*version.h
   =========*/
 
- #define MAJOR_VERSION "2"
- #define MINOR_VERSION "0"
+ #define MAJOR_VERSION "x"
+ #define MINOR_VERSION "x"

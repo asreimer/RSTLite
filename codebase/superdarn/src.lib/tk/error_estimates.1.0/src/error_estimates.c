@@ -100,4 +100,42 @@ int acf_error(int mplgs, float pwr0, float noise_power, float *selfclutter, floa
     return 0;
 }
 
+/* Unnormalized ACF error estimator in the presense of self-clutter
+  calculates the error in the unnormalized acf estimator with self-clutter
+  using the equation given by:
+
+        ACF = 1/K sum( (V_1i)(V_2i)* )
+
+  where * denotes the complex conjugate and indicies 1 and 2 denote voltage 
+  samples at times 1 and 2 respectively.
+*/
+int mag_error_full(int mplgs, float *pwr, float noise_power, float *selfclutter, float K, float *error) {
+
+    int i;
+    for (i=0;i<mplgs;i++){
+        error[i] = sqrt(1.0/K) * (pwr[i] + noise_power + selfclutter[i]);
+    }
+
+    return 0;
+}
+
+/* Unnormalized ACF component error estimator in the presense of self-clutter
+  calculates the error in the unnormalized acf estimator with self-clutter
+  using the equation given by:
+
+        ACF = 1/K sum( (V_1i)(V_2i)* )
+
+  where * denotes the complex conjugate and indicies 1 and 2 denote voltage 
+  samples at times 1 and 2 respectively.
+*/
+int acf_comp_error(int mplgs, float pwr0, float noise_power, float *rho, float *rho_c, float *selfclutter, float K, float *error) {
+
+    int i;
+    for (i=0;i<mplgs;i++){
+        error[i] = (pwr0 + noise_power + selfclutter[i])*sqrt((1.0-rho[i]*rho[i])/(2.0*K) + (rho_c[i]*rho_c[i])/K);
+    }
+
+    return 0;
+}
+
 
